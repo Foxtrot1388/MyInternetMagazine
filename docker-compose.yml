@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  db:
+    container_name: pgdb_profile
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: Profile
+    ports:
+      - "5432:5432"
+  pgadmin:
+    container_name: pgadmin_profile
+    image: dpage/pgadmin4
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: foxtrot13.88@yandex.ru
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"

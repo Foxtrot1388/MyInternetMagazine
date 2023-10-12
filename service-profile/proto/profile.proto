@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package profile;
+option go_package = "pkg/profile";
+
+service ProfileApi {
+    rpc Get(GetRequest) returns (GetResponse){}
+    rpc Create(CreateRequest) returns (CreateResponse) {}
+    rpc Delete(GetRequest) returns (DeleteResponse){}
+    rpc Login(LoginRequest) returns (LoginResponse){}
+    rpc Ping(PingParams) returns (PingResponse) {}
+}
+
+message PingParams {}
+
+message PingResponse {
+    bool ok = 1;
+}
+
+message DeleteResponse {
+    bool ok = 1;
+}
+
+message GetRequest {
+    int32 id = 1;
+}
+
+message GetResponse {
+    string login = 1;
+    string firstname = 2;
+    string secondname = 3;
+    string lastname = 4;
+    string email = 5;
+}
+
+message CreateRequest {
+    string pass = 1;
+    string login = 2;
+    string firstname = 3;
+    string secondname = 4;
+    string lastname = 5;
+    string email = 6;
+}
+
+message CreateResponse {
+    int32 id = 1;
+}
+
+message LoginRequest {
+    string pass = 1;
+    string login = 2;
+}
+
+message LoginResponse {
+    int32 id = 1;
+    string firstname = 2;
+    string secondname = 3;
+    string lastname = 4;
+    string email = 5;
+}
