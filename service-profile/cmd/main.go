@@ -8,12 +8,11 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"google.golang.org/grpc"
-	postgresgorm "gorm.io/driver/postgres"
-	"gorm.io/gorm"
 	"net"
 	"v1/internal/config"
+	"v1/internal/profile/proto"
+	"v1/internal/storage/gorm"
 	"v1/pkg/api"
-	profile "v1/pkg/profile/proto"
 )
 
 func main() {
@@ -26,7 +25,7 @@ func main() {
 		panic(err)
 	}
 
-	db, err := gorm.Open(postgresgorm.Open(connection), &gorm.Config{})
+	db, err := storage.New(connection)
 	if err != nil {
 		panic(err)
 	}

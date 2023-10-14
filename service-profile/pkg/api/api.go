@@ -2,13 +2,20 @@ package api
 
 import (
 	"context"
-	"gorm.io/gorm"
-	"v1/pkg/profile/proto"
+	entity "v1/internal"
+	"v1/internal/profile/proto"
 )
 
 type Server struct {
 	profile.UnimplementedProfileApiServer
-	DB *gorm.DB
+	DB Repository
+}
+
+type Repository interface {
+	Login(ctx context.Context, pass, login string) (*entity.LoginUser, error)
+	Get(ctx context.Context, id int) (*entity.User, error)
+	Create(ctx context.Context, user *entity.NewUser) (int, error)
+	Delete(ctx context.Context, id int) (bool, error)
 }
 
 func (s *Server) Ping(ctx context.Context, req *profile.PingParams) (*profile.PingResponse, error) {
@@ -17,8 +24,7 @@ func (s *Server) Ping(ctx context.Context, req *profile.PingParams) (*profile.Pi
 
 func (s *Server) Login(ctx context.Context, req *profile.LoginRequest) (*profile.LoginResponse, error) {
 
-	var user LoginUserRequest
-	err := s.DB.WithContext(ctx).Where("pass = ? AND login = ?", req.Pass, req.Login).First(&user).Error
+	user, err := s.DB.Login(ctx, req.Pass, req.Login)
 	if err != nil {
 		return nil, err
 	}
@@ -35,8 +41,7 @@ func (s *Server) Login(ctx context.Context, req *profile.LoginRequest) (*profile
 
 func (s *Server) Get(ctx context.Context, req *profile.GetRequest) (*profile.GetResponse, error) {
 
-	var user GetUserRequest
-	err := s.DB.WithContext(ctx).Take(&user, req.Id).Error
+	user, err := s.DB.Get(ctx, int(req.Id))
 	if err != nil {
 		return nil, err
 	}
@@ -53,7 +58,7 @@ func (s *Server) Get(ctx context.Context, req *profile.GetRequest) (*profile.Get
 
 func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profile.CreateResponse, error) {
 
-	user := CreateUserRequest{
+	user := entity.NewUser{
 		Pass:       req.Pass,
 		Login:      req.Login,
 		Firstname:  req.Firstname,
@@ -62,13 +67,13 @@ func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profi
 		Email:      req.Email,
 	}
 
-	err := s.DB.WithContext(ctx).Create(&user).Error
+	id, err := s.DB.Create(ctx, &user)
 
 	if err != nil {
 		return &profile.CreateResponse{}, err
 	} else {
 		return &profile.CreateResponse{
-			Id: int32(user.Id),
+			Id: int32(id),
 		}, nil
 	}
 
@@ -76,16 +81,13 @@ func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profi
 
 func (s *Server) Delete(ctx context.Context, req *profile.GetRequest) (*profile.DeleteResponse, error) {
 
-	err := s.DB.WithContext(ctx).Delete(&DeleteUserRequest{Id: int(req.Id)}).Error
-	if err != nil {
-		return nil, err
-	}
+	result, err := s.DB.Delete(ctx, int(req.Id))
 
 	if err != nil {
 		return &profile.DeleteResponse{}, err
 	} else {
 		return &profile.DeleteResponse{
-			Ok: true,
+			Ok: result,
 		}, nil
 	}
 
