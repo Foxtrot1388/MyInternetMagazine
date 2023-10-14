@@ -10,8 +10,11 @@ services:
       POSTGRES_DB: Profile
     ports:
       - "5432:5432"
+    networks:
+    - myinternetmagazine
+
   pgadmin:
-    container_name: pgadmin_profile
+    container_name: pgadminmyinternetmagazine
     image: dpage/pgadmin4
     restart: always
     environment:
@@ -19,3 +22,27 @@ services:
       PGADMIN_DEFAULT_PASSWORD: root
     ports:
       - "5050:80"
+    networks:
+    - myinternetmagazine
+
+  profile:
+    container_name: service_profile
+    build:
+      context: ./service-profile
+      dockerfile: ./Dockerfile
+    restart: always
+    networks:
+    - myinternetmagazine
+    ports:
+      - "8080:8080"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_HOST: pgdb_profile
+      POSTGRES_PORT: 5432
+    depends_on:
+      - db
+
+networks:
+  myinternetmagazine:
+    driver: bridge
