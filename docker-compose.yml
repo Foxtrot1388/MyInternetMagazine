@@ -1,6 +1,7 @@
 version: '3.8'
 services:
-  db:
+
+  db_profile:
     container_name: pgdb_profile
     image: postgres
     restart: always
@@ -10,6 +11,31 @@ services:
       POSTGRES_DB: Profile
     ports:
       - "5432:5432"
+    networks:
+    - myinternetmagazine
+
+  db_catalog:
+    container_name: pgdb_catalog
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: Catalog
+    ports:
+      - "5433:5432"
+    networks:
+    - myinternetmagazine
+
+  redis_catalog:
+    container_name: redisca_catalog
+    image: redis:4.0-alpine
+    command:
+      - 'redis-server'
+      - '--loglevel ${REDIS_LOGLEVEL:-warning}'
+      - '--databases 2'
+    ports:
+      - "6379:6379"
     networks:
     - myinternetmagazine
 
@@ -41,7 +67,28 @@ services:
       POSTGRES_HOST: pgdb_profile
       POSTGRES_PORT: 5432
     depends_on:
-      - db
+      - db_profile
+
+  catalog:
+    container_name: service_catalog
+    build:
+      context: ./service-catalog
+      dockerfile: ./Dockerfile
+    restart: always
+    networks:
+    - myinternetmagazine
+    ports:
+      - "8081:8081"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_HOST: pgdb_catalog
+      POSTGRES_PORT: 5432
+      REDIS_HOST: redisca_catalog
+      REDIS_PORT: 6379
+    depends_on:
+      - db_catalog
+      - redis_catalog
 
 networks:
   myinternetmagazine:

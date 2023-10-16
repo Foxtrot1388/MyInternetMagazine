@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package catalog;
+option go_package = "internal/catalog";
+
+service CatalogApi {
+    rpc Get(GetRequest) returns (GetResponse){}
+    rpc Create(CreateRequest) returns (CreateResponse) {}
+    rpc Delete(GetRequest) returns (DeleteResponse) {}
+    rpc List(ListParams) returns (ListResponse) {}
+    rpc Ping(PingParams) returns (PingResponse) {}
+}
+
+message ListParams {}
+
+message ListResponse{
+    repeated ElementOfList List = 1;
+}
+
+message ElementOfList {
+    int32 id = 1;
+    string name = 2;
+}
+
+message PingParams {}
+
+message PingResponse {
+    bool ok = 1;
+}
+
+message DeleteResponse {
+    bool ok = 1;
+}
+
+message GetRequest {
+    int32 id = 1;
+}
+
+message GetResponse {
+    string name = 1;
+    string description = 2;
+}
+
+message CreateRequest {
+    string name = 1;
+    string description = 2;
+}
+
+message CreateResponse {
+    int32 id = 1;
+}
