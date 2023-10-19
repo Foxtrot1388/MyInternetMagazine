@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"net"
 	"v1/internal/config"
+	"v1/internal/lib"
 	"v1/internal/profile/proto"
 	"v1/internal/storage/gorm"
 	"v1/pkg/api"
@@ -49,7 +50,9 @@ func getConnectionString(cfg *config.Config) string {
 	return fmt.Sprintf("postgres://%s:%s/Profile?sslmode=disable&user=%s&password=%s", cfg.Host, cfg.Port, cfg.User, cfg.Pass)
 }
 
-func migrateDB(connection string) error {
+func migrateDB(connection string) (err error) {
+	const op = "main.migrateDB"
+	defer func() { err = lib.WrapErr(op, err) }()
 
 	db, err := sql.Open("postgres", connection)
 	if err != nil {

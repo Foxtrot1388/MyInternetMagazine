@@ -12,6 +12,7 @@ import (
 	"v1/internal/cashe"
 	"v1/internal/catalog/proto"
 	"v1/internal/config"
+	"v1/internal/lib"
 	"v1/internal/storage/gorm"
 	"v1/pkg/api"
 )
@@ -62,7 +63,9 @@ func getConnectionStringCashe(cfg *config.CasheConfig) string {
 	return fmt.Sprintf("%s:%s", cfg.CasheHost, cfg.CashePort)
 }
 
-func migrateDB(connection string) error {
+func migrateDB(connection string) (err error) {
+	const op = "main.migrateDB"
+	defer func() { err = lib.WrapErr(op, err) }()
 
 	db, err := sql.Open("postgres", connection)
 	if err != nil {

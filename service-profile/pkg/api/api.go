@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	entity "v1/internal"
+	"v1/internal/lib"
 	"v1/internal/profile/proto"
 )
 
@@ -23,10 +24,11 @@ func (s *Server) Ping(ctx context.Context, req *profile.PingParams) (*profile.Pi
 }
 
 func (s *Server) Login(ctx context.Context, req *profile.LoginRequest) (*profile.LoginResponse, error) {
+	const op = "api.login"
 
 	user, err := s.DB.Login(ctx, req.Pass, req.Login)
 	if err != nil {
-		return nil, err
+		return nil, lib.WrapErr(op, err)
 	}
 
 	return &profile.LoginResponse{
@@ -40,10 +42,11 @@ func (s *Server) Login(ctx context.Context, req *profile.LoginRequest) (*profile
 }
 
 func (s *Server) Get(ctx context.Context, req *profile.GetRequest) (*profile.GetResponse, error) {
+	const op = "api.get"
 
 	user, err := s.DB.Get(ctx, int(req.Id))
 	if err != nil {
-		return nil, err
+		return nil, lib.WrapErr(op, err)
 	}
 
 	return &profile.GetResponse{
@@ -57,6 +60,7 @@ func (s *Server) Get(ctx context.Context, req *profile.GetRequest) (*profile.Get
 }
 
 func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profile.CreateResponse, error) {
+	const op = "api.create"
 
 	user := entity.NewUser{
 		Pass:       req.Pass,
@@ -70,7 +74,7 @@ func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profi
 	id, err := s.DB.Create(ctx, &user)
 
 	if err != nil {
-		return &profile.CreateResponse{}, err
+		return &profile.CreateResponse{}, lib.WrapErr(op, err)
 	} else {
 		return &profile.CreateResponse{
 			Id: int32(id),
@@ -80,11 +84,12 @@ func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profi
 }
 
 func (s *Server) Delete(ctx context.Context, req *profile.GetRequest) (*profile.DeleteResponse, error) {
+	const op = "api.delete"
 
 	result, err := s.DB.Delete(ctx, int(req.Id))
 
 	if err != nil {
-		return &profile.DeleteResponse{}, err
+		return &profile.DeleteResponse{}, lib.WrapErr(op, err)
 	} else {
 		return &profile.DeleteResponse{
 			Ok: result,

@@ -5,6 +5,7 @@ import (
 	"strconv"
 	entity "v1/internal"
 	"v1/internal/catalog/proto"
+	"v1/internal/lib"
 )
 
 type Server struct {
@@ -30,10 +31,11 @@ func (s *Server) Ping(ctx context.Context, req *catalog.PingParams) (*catalog.Pi
 }
 
 func (s *Server) List(ctx context.Context, req *catalog.ListParams) (*catalog.ListResponse, error) {
+	const op = "api.list"
 
 	result, err := s.DB.List(ctx)
 	if err != nil {
-		return nil, err
+		return nil, lib.WrapErr(op, err)
 	}
 
 	productslist := make([]*catalog.ElementOfList, len(*result))
@@ -49,18 +51,19 @@ func (s *Server) List(ctx context.Context, req *catalog.ListParams) (*catalog.Li
 }
 
 func (s *Server) Get(ctx context.Context, req *catalog.GetRequest) (*catalog.GetResponse, error) {
+	const op = "api.get"
 
 	product, err := s.Cashe.Get(ctx, strconv.Itoa(int(req.Id)))
 	if err != nil {
-		
+
 		product, err = s.DB.Get(ctx, int(req.Id))
 		if err != nil {
-			return nil, err
+			return nil, lib.WrapErr(op, err)
 		}
 
 		err = s.Cashe.Set(ctx, strconv.Itoa(int(req.Id)), product)
 		if err != nil {
-			return nil, err
+			return nil, lib.WrapErr(op, err)
 		}
 
 	}
@@ -73,6 +76,7 @@ func (s *Server) Get(ctx context.Context, req *catalog.GetRequest) (*catalog.Get
 }
 
 func (s *Server) Create(ctx context.Context, req *catalog.CreateRequest) (*catalog.CreateResponse, error) {
+	const op = "api.create"
 
 	product := entity.Product{
 		Name:        req.Name,
@@ -82,7 +86,7 @@ func (s *Server) Create(ctx context.Context, req *catalog.CreateRequest) (*catal
 	id, err := s.DB.Create(ctx, &product)
 
 	if err != nil {
-		return &catalog.CreateResponse{}, err
+		return &catalog.CreateResponse{}, lib.WrapErr(op, err)
 	} else {
 		return &catalog.CreateResponse{
 			Id: int32(id),
@@ -92,11 +96,12 @@ func (s *Server) Create(ctx context.Context, req *catalog.CreateRequest) (*catal
 }
 
 func (s *Server) Delete(ctx context.Context, req *catalog.GetRequest) (*catalog.DeleteResponse, error) {
+	const op = "api.delete"
 
 	result, err := s.DB.Delete(ctx, int(req.Id))
 
 	if err != nil {
-		return &catalog.DeleteResponse{}, err
+		return &catalog.DeleteResponse{}, lib.WrapErr(op, err)
 	} else {
 		return &catalog.DeleteResponse{
 			Ok: result,
