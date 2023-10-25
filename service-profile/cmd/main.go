@@ -35,7 +35,7 @@ func main() {
 	s := grpc.NewServer()
 	profile.RegisterProfileApiServer(s, &srv)
 
-	l, err := net.Listen("tcp", ":8080")
+	l, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		panic(err)
 	}

@@ -1,6 +1,8 @@
 Work in progress...
 
-## MyInternetMagazine
+![MyInternetMagazine](MyInternetMagazine.png)
+
+# MyInternetMagazine
 
 Попытка создать интернет магазин в микросервисной архитектуре (в учебных целях)
 

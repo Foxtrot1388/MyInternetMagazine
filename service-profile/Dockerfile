@@ -21,6 +21,6 @@ RUN apk --no-cache add ca-certificates
 COPY --from=builder /usr/local/go/src/app.exe /
 COPY /migrations /migrations
 
-EXPOSE 8080
+EXPOSE 8081
 
 CMD [ "/app.exe"]

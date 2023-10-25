@@ -1,6 +1,19 @@
 version: '3.8'
 services:
 
+  krakend:
+    container_name: krakend
+    image: devopsfaith/krakend:2.4.6
+    restart: always
+    volumes:
+      - "./krakend.json:/etc/krakend/krakend.json"
+      - "./pb/:/etc/krakend/pb/"
+    networks:
+      - myinternetmagazine
+    ports:
+      - "8080:8080"
+    command: ["run","-c","krakend.json"]
+
   db_profile:
     container_name: pgdb_profile
     image: postgres
@@ -9,8 +22,6 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: Profile
-    ports:
-      - "5432:5432"
     networks:
     - myinternetmagazine
 
@@ -22,8 +33,6 @@ services:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
       POSTGRES_DB: Catalog
-    ports:
-      - "5433:5432"
     networks:
     - myinternetmagazine
 
@@ -34,8 +43,6 @@ services:
       - 'redis-server'
       - '--loglevel ${REDIS_LOGLEVEL:-warning}'
       - '--databases 2'
-    ports:
-      - "6379:6379"
     networks:
     - myinternetmagazine
 
@@ -44,10 +51,8 @@ services:
     image: dpage/pgadmin4
     restart: always
     environment:
-      PGADMIN_DEFAULT_EMAIL: foxtrot13.88@yandex.ru
+      PGADMIN_DEFAULT_EMAIL: test@example.com
       PGADMIN_DEFAULT_PASSWORD: root
-    ports:
-      - "5050:80"
     networks:
     - myinternetmagazine
 
@@ -59,8 +64,6 @@ services:
     restart: always
     networks:
     - myinternetmagazine
-    ports:
-      - "8080:8080"
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
@@ -77,8 +80,6 @@ services:
     restart: always
     networks:
     - myinternetmagazine
-    ports:
-      - "8081:8081"
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: root
