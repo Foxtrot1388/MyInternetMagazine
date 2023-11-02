@@ -1,0 +1,152 @@
+apiVersion : apps/v1
+kind: Deployment
+metadata:
+  name: my-internet-magazine-catalog
+  labels:
+    app  : my-internet-magazine-app
+    env  : prod
+    owner: Foxtrot1388
+spec:
+  selector:
+    matchLabels:
+      project: my-internet-magazine-catalog
+  template:
+    metadata:
+      labels:
+        project: my-internet-magazine-catalog
+    spec:
+      containers:
+        - name : service-catalog
+          image: myinternetmagazine-catalog:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8081
+          env:
+          - name: POSTGRES_USER
+            value: "root"
+          - name: POSTGRES_PASSWORD
+            value: "root"
+          - name: POSTGRES_HOST
+            value: "my-internet-magazine-db-catalog"
+          - name: POSTGRES_PORT
+            value: "5432"
+          - name: REDIS_HOST
+            value: "my-internet-magazine-db-cash"
+          - name: REDIS_PORT
+            value: "6379"
+
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: catalog-autoscaling
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: my-internet-magazine-catalog
+  minReplicas: 2
+  maxReplicas: 6
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-internet-magazine-service
+  labels:
+     env  : prod
+     owner: Foxtrot1388
+spec:
+  selector:
+    project: my-internet-magazine-catalog
+  ports:
+    - name      : app-listener
+      protocol  : TCP
+      port      : 8081
+      targetPort: 8081
+  type: NodePort
+
+---
+apiVersion : v1
+kind: Pod
+metadata:
+  name: pgdb-catalog
+  labels:
+    app  : my-internet-magazine-app
+    env  : prod
+    owner: Foxtrot1388
+    project: my-internet-magazine-db-catalog
+spec:
+  containers:
+    - name : pgdb-catalog
+      image: postgres
+      ports:
+        - containerPort: 5432
+      env:
+      - name: POSTGRES_USER
+        value: "root"
+      - name: POSTGRES_PASSWORD
+        value: "root"
+      - name: POSTGRES_DB
+        value: "Catalog"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-internet-magazine-db-catalog
+  labels:
+     env  : prod
+     owner: Foxtrot1388
+spec:
+  selector:
+    project: my-internet-magazine-db-catalog
+  ports:
+    - name      : app-listener
+      protocol  : TCP
+      port      : 5432
+      targetPort: 5432
+  type: ClusterIP
+
+---
+apiVersion : v1
+kind: Pod
+metadata:
+  name: redis-catalog
+  labels:
+    app  : my-internet-magazine-app
+    env  : prod
+    owner: Foxtrot1388
+    project: my-internet-magazine-db-cash
+spec:
+  containers:
+    - name : redis-catalog
+      image: redis:4.0-alpine
+      command: [ "redis-server", "--loglevel warning", "--databases 2" ]
+      ports:
+        - containerPort: 6379
+      env:
+      - name: POSTGRES_USER
+        value: "root"
+      - name: POSTGRES_PASSWORD
+        value: "root"
+      - name: POSTGRES_DB
+        value: "Catalog"
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: my-internet-magazine-db-cash
+  labels:
+     env  : prod
+     owner: Foxtrot1388
+spec:
+  selector:
+    project: my-internet-magazine-db-cash
+  ports:
+    - name      : app-listener
+      protocol  : TCP
+      port      : 6379
+      targetPort: 6379
+  type: ClusterIP
