@@ -6,4 +6,4 @@ Work in progress...
 
 Попытка создать интернет магазин в микросервисной архитектуре (в учебных целях)
 
-gGRPC, postgres, migrate, gorm, redis, docker-compose
+gGRPC, postgres, migrate, gorm, redis, docker-compose, minikube
