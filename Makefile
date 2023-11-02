@@ -18,9 +18,13 @@ kuberun: compile
 	docker build service-profile -t myinternetmagazine-profile:latest -f service-profile/Dockerfile
 	minikube image load myinternetmagazine-profile:latest
 	minikube kubectl -- apply -f deployment-my-internet-magazine-profile.yaml
+	docker build service-catalog -t myinternetmagazine-catalog:latest -f service-catalog/Dockerfile
+	minikube image load myinternetmagazine-catalog:latest
+	minikube kubectl -- apply -f deployment-my-internet-magazine-catalog.yaml
 
 kubestop:
 	minikube kubectl -- delete -f deployment-my-internet-magazine-profile.yaml
+	minikube kubectl -- delete -f deployment-my-internet-magazine-catalog.yaml
 	minikube stop
 
 kubeservice:
