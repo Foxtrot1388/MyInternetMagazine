@@ -66,15 +66,15 @@ spec:
 apiVersion : v1
 kind: Pod
 metadata:
-  name: {{ .Release.Name }}-pgdb-profile
+  name: {{ .Release.Name }}-pgdb
   labels:
     app  : {{ .Release.Name }}-app
     env  : prod
     owner: Foxtrot1388
-    project: my-internet-magazine-db-profile
+    project: {{ .Release.Name }}-db
 spec:
   containers:
-    - name : pgdb-profile
+    - name : pgdb
       image: {{ .Values.container.dbimage }}
       ports:
         - containerPort: 5432
@@ -96,7 +96,7 @@ metadata:
      owner: Foxtrot1388
 spec:
   selector:
-    project: {{ .Release.Name }}-db-profile
+    project: {{ .Release.Name }}-db
   ports:
     - name      : app-listener
       protocol  : TCP

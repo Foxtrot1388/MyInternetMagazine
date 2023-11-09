@@ -1,23 +1,23 @@
 apiVersion : apps/v1
 kind: Deployment
 metadata:
-  name: my-internet-magazine-catalog
+  name: {{ .Release.Name }}
   labels:
-    app  : my-internet-magazine-app
+    app  : {{ .Release.Name }}-app
     env  : prod
     owner: Foxtrot1388
 spec:
   selector:
     matchLabels:
-      project: my-internet-magazine-catalog
+      project: {{ .Release.Name }}
   template:
     metadata:
       labels:
-        project: my-internet-magazine-catalog
+        project: {{ .Release.Name }}
     spec:
       containers:
         - name : service-catalog
-          image: myinternetmagazine-catalog:latest
+          image: {{ .Values.container.image}}
           imagePullPolicy: Never
           ports:
             - containerPort: 8081
@@ -27,11 +27,11 @@ spec:
           - name: POSTGRES_PASSWORD
             value: "root"
           - name: POSTGRES_HOST
-            value: "my-internet-magazine-db-catalog"
+            value: "{{ .Release.Name }}-db"
           - name: POSTGRES_PORT
             value: "5432"
           - name: REDIS_HOST
-            value: "my-internet-magazine-db-cash"
+            value: "{{ .Release.Name }}-db-cash"
           - name: REDIS_PORT
             value: "6379"
 
@@ -39,26 +39,26 @@ spec:
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
-  name: catalog-autoscaling
+  name: {{ .Release.Name }}-autoscaling
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: my-internet-magazine-catalog
-  minReplicas: 2
-  maxReplicas: 6
+    name: {{ .Release.Name }}
+  minReplicas: {{ .Values.minReplicas }}
+  maxReplicas: {{ .Values.maxReplicas }}
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-internet-magazine-service
+  name: {{ .Release.Name }}-service
   labels:
      env  : prod
      owner: Foxtrot1388
 spec:
   selector:
-    project: my-internet-magazine-catalog
+    project: {{ .Release.Name }}
   ports:
     - name      : app-listener
       protocol  : TCP
@@ -70,16 +70,16 @@ spec:
 apiVersion : v1
 kind: Pod
 metadata:
-  name: pgdb-catalog
+  name: {{ .Release.Name }}-pgdb
   labels:
-    app  : my-internet-magazine-app
+    app  : {{ .Release.Name }}-app
     env  : prod
     owner: Foxtrot1388
-    project: my-internet-magazine-db-catalog
+    project: {{ .Release.Name }}-db
 spec:
   containers:
-    - name : pgdb-catalog
-      image: postgres
+    - name : pgdb
+      image: {{ .Values.container.dbimage }}
       ports:
         - containerPort: 5432
       env:
@@ -94,13 +94,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-internet-magazine-db-catalog
+  name: {{ .Release.Name }}-db
   labels:
      env  : prod
      owner: Foxtrot1388
 spec:
   selector:
-    project: my-internet-magazine-db-catalog
+    project: {{ .Release.Name }}-db
   ports:
     - name      : app-listener
       protocol  : TCP
@@ -112,16 +112,16 @@ spec:
 apiVersion : v1
 kind: Pod
 metadata:
-  name: redis-catalog
+  name: {{ .Release.Name }}-cashe
   labels:
-    app  : my-internet-magazine-app
+    app  : {{ .Release.Name }}-app
     env  : prod
     owner: Foxtrot1388
-    project: my-internet-magazine-db-cash
+    project: {{ .Release.Name }}-db-cashe
 spec:
   containers:
-    - name : redis-catalog
-      image: redis:4.0-alpine
+    - name : {{ .Release.Name }}-cashe
+      image: {{ .Values.container.cashe }}
       command: [ "redis-server", "--loglevel warning", "--databases 2" ]
       ports:
         - containerPort: 6379
@@ -137,13 +137,13 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: my-internet-magazine-db-cash
+  name: {{ .Release.Name }}-db-cashe
   labels:
      env  : prod
      owner: Foxtrot1388
 spec:
   selector:
-    project: my-internet-magazine-db-cash
+    project: {{ .Release.Name }}-db-cashe
   ports:
     - name      : app-listener
       protocol  : TCP
