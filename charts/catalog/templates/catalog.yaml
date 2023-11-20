@@ -27,11 +27,11 @@ spec:
           - name: POSTGRES_PASSWORD
             value: "root"
           - name: POSTGRES_HOST
-            value: "{{ .Release.Name }}-db"
+            value: "{{ .Release.Name }}-db-service"
           - name: POSTGRES_PORT
             value: "5432"
           - name: REDIS_HOST
-            value: "{{ .Release.Name }}-db-cash"
+            value: "{{ .Release.Name }}-db-cashe"
           - name: REDIS_PORT
             value: "6379"
 
@@ -70,48 +70,6 @@ spec:
 apiVersion : v1
 kind: Pod
 metadata:
-  name: {{ .Release.Name }}-pgdb
-  labels:
-    app  : {{ .Release.Name }}-app
-    env  : prod
-    owner: Foxtrot1388
-    project: {{ .Release.Name }}-db
-spec:
-  containers:
-    - name : pgdb
-      image: {{ .Values.container.dbimage }}
-      ports:
-        - containerPort: 5432
-      env:
-      - name: POSTGRES_USER
-        value: "root"
-      - name: POSTGRES_PASSWORD
-        value: "root"
-      - name: POSTGRES_DB
-        value: "Catalog"
-
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Release.Name }}-db
-  labels:
-     env  : prod
-     owner: Foxtrot1388
-spec:
-  selector:
-    project: {{ .Release.Name }}-db
-  ports:
-    - name      : app-listener
-      protocol  : TCP
-      port      : 5432
-      targetPort: 5432
-  type: ClusterIP
-
----
-apiVersion : v1
-kind: Pod
-metadata:
   name: {{ .Release.Name }}-cashe
   labels:
     app  : {{ .Release.Name }}-app
@@ -125,13 +83,6 @@ spec:
       command: [ "redis-server", "--loglevel warning", "--databases 2" ]
       ports:
         - containerPort: 6379
-      env:
-      - name: POSTGRES_USER
-        value: "root"
-      - name: POSTGRES_PASSWORD
-        value: "root"
-      - name: POSTGRES_DB
-        value: "Catalog"
 
 ---
 apiVersion: v1
