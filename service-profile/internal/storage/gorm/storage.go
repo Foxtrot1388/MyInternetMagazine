@@ -4,7 +4,7 @@ import (
 	"context"
 	postgresgorm "gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	entity "v1/internal"
+	"v1/internal/entity"
 	"v1/internal/lib"
 )
 
@@ -22,11 +22,11 @@ func New(connection string) (*Storage, error) {
 	return &Storage{db: db.Table("users")}, nil
 }
 
-func (s *Storage) Login(ctx context.Context, pass, login string) (*entity.LoginUser, error) {
+func (s *Storage) Login(ctx context.Context, login string) (*entity.UserDB, error) {
 	const op = "gorm.login"
 
-	var user entity.LoginUser
-	err := s.db.WithContext(ctx).Where("pass = ? AND login = ?", pass, login).First(&user).Error
+	var user entity.UserDB
+	err := s.db.WithContext(ctx).Where("login = ?", login).First(&user).Error
 	if err != nil {
 		return nil, lib.WrapErr(op, err)
 	}
