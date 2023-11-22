@@ -30,9 +30,5 @@ type NewUser struct {
 }
 
 type LoginUser struct {
-	Id         int
-	Firstname  string
-	Secondname string
-	Lastname   string
-	Email      string
+	Token string
 }

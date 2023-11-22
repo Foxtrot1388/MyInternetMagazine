@@ -3,15 +3,18 @@ package service
 import (
 	"context"
 	"errors"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
+	"time"
 	"v1/internal/entity"
 	"v1/internal/lib"
 )
 
 type Service struct {
-	DB  Repository
-	log *slog.Logger
+	DB         Repository
+	log        *slog.Logger
+	signingkey string
 }
 
 type Repository interface {
@@ -21,8 +24,8 @@ type Repository interface {
 	Delete(ctx context.Context, id int) (bool, error)
 }
 
-func New(log *slog.Logger, DB Repository) *Service {
-	return &Service{DB: DB, log: log}
+func New(log *slog.Logger, DB Repository, signingkey string) *Service {
+	return &Service{DB: DB, log: log, signingkey: signingkey}
 }
 
 var (
@@ -47,12 +50,20 @@ func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginU
 		return nil, lib.WrapErr(op, ErrInvalidCredentials)
 	}
 
+	token := jwt.New(jwt.SigningMethodHS256)
+	claims := token.Claims.(jwt.MapClaims)
+	claims["id"] = userdb.Id
+	claims["email"] = userdb.Email
+	claims["login"] = userdb.Login
+	claims["exp"] = time.Now().Add(2 * time.Hour).Unix()
+	tokenString, err := token.SignedString([]byte(s.signingkey))
+	if err != nil {
+		log.Error(err.Error())
+		return nil, lib.WrapErr(op, err)
+	}
+
 	return &entity.LoginUser{
-		Id:         userdb.Id,
-		Firstname:  userdb.Firstname,
-		Secondname: userdb.Secondname,
-		Lastname:   userdb.Lastname,
-		Email:      userdb.Email,
+		Token: tokenString,
 	}, nil
 
 }

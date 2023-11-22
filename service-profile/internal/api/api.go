@@ -40,11 +40,7 @@ func (s *Server) Login(ctx context.Context, req *profile.LoginRequest) (*profile
 	}
 
 	return &profile.LoginResponse{
-		Id:         int32(user.Id),
-		Firstname:  user.Firstname,
-		Secondname: user.Secondname,
-		Lastname:   user.Lastname,
-		Email:      user.Email,
+		Token: user.Token,
 	}, nil
 
 }

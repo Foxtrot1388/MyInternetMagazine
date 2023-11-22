@@ -69,6 +69,7 @@ services:
       POSTGRES_PASSWORD: root
       POSTGRES_HOST: pgdb_profile
       POSTGRES_PORT: 5432
+      SIGNING_KEY: example
     depends_on:
       - db_profile
 

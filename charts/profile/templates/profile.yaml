@@ -30,6 +30,8 @@ spec:
             value: "{{ .Release.Name }}-db-service"
           - name: POSTGRES_PORT
             value: "5432"
+          - name: SIGNING_KEY
+            value: "example"
 
 ---
 apiVersion: autoscaling/v1

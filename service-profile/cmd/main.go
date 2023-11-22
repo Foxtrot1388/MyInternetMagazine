@@ -42,7 +42,7 @@ func main() {
 		panic(err)
 	}
 
-	usercases := service.New(log, db)
+	usercases := service.New(log, db, cfg.SigningKey)
 	srv := api.Server{S: usercases}
 	s := grpc.NewServer()
 	profile.RegisterProfileApiServer(s, &srv)

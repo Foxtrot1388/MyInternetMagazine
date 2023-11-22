@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	Host string
-	Port string
-	User string
-	Pass string
+	Host       string
+	Port       string
+	User       string
+	Pass       string
+	SigningKey string
 }
 
 var (
@@ -20,10 +21,11 @@ var (
 func Get() *Config {
 	once.Do(func() {
 		instance = &Config{
-			Host: getEnv("POSTGRES_HOST", "localhost"),
-			Port: getEnv("POSTGRES_PORT", "5432"),
-			User: getEnv("POSTGRES_USER", "root"),
-			Pass: getEnv("POSTGRES_PASSWORD", "root"),
+			Host:       getEnv("POSTGRES_HOST", "localhost"),
+			Port:       getEnv("POSTGRES_PORT", "5432"),
+			User:       getEnv("POSTGRES_USER", "root"),
+			Pass:       getEnv("POSTGRES_PASSWORD", "root"),
+			SigningKey: getEnv("SIGNING_KEY", ""),
 		}
 	})
 	return instance
