@@ -4,7 +4,7 @@ import (
 	"context"
 	postgresgorm "gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	entity "v1/internal"
+	"v1/internal/entity"
 	"v1/internal/lib"
 )
 

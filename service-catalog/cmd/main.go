@@ -8,48 +8,73 @@ import (
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"google.golang.org/grpc"
+	"log/slog"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
+	"v1/internal/api"
 	"v1/internal/cashe"
 	"v1/internal/catalog/proto"
 	"v1/internal/config"
 	"v1/internal/lib"
+	"v1/internal/service"
 	"v1/internal/storage/gorm"
-	"v1/pkg/api"
 )
 
 func main() {
+
+	log := slog.New(
+		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
+	)
 
 	cfg := config.Get()
 	connection := getConnectionString(cfg)
 
 	err := migrateDB(connection)
 	if err != nil {
+		log.Error(err.Error())
 		panic(err)
 	}
 
 	db, err := storage.New(connection)
 	if err != nil {
+		log.Error(err.Error())
 		panic(err)
 	}
 
 	cashedb, err := cashe.New(getConnectionStringCashe(&cfg.Cashe))
 	if err != nil {
+		log.Error(err.Error())
 		panic(err)
 	}
 
-	srv := api.Server{
-		DB:    db,
-		Cashe: cashedb,
-	}
+	usercases := service.New(log, db, cashedb)
+	srv := api.Server{S: usercases}
 	s := grpc.NewServer()
 	catalog.RegisterCatalogApiServer(s, &srv)
 
+	log.Info("start listen")
+	go mustListen(log, s)
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	<-stop
+	log.Info("graceful stop")
+	s.GracefulStop()
+
+}
+
+func mustListen(log *slog.Logger, s *grpc.Server) {
+
 	l, err := net.Listen("tcp", ":8081")
 	if err != nil {
+		log.Error(err.Error())
 		panic(err)
 	}
 
 	if err = s.Serve(l); err != nil {
+		log.Error(err.Error())
 		panic(err)
 	}
 
@@ -90,8 +115,13 @@ func migrateDB(connection string) (err error) {
 	}
 
 	err = m.Up()
-	if err != nil && !errors.Is(err, migrate.ErrNoChange) {
-		return err
+	if err != nil {
+		if errors.Is(err, migrate.ErrNoChange) {
+			fmt.Println("No migration up")
+			return nil
+		} else {
+			return err
+		}
 	}
 
 	return nil

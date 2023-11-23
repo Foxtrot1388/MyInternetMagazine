@@ -2,24 +2,18 @@ package api
 
 import (
 	"context"
-	"strconv"
-	entity "v1/internal"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"v1/internal/catalog/proto"
-	"v1/internal/lib"
+	"v1/internal/entity"
 )
 
 type Server struct {
 	catalog.UnimplementedCatalogApiServer
-	DB    DBRepository
-	Cashe CasheRepository
+	S Service
 }
 
-type CasheRepository interface {
-	Get(ctx context.Context, key string) (*entity.Product, error)
-	Set(ctx context.Context, key string, v *entity.Product) error
-}
-
-type DBRepository interface {
+type Service interface {
 	Get(ctx context.Context, id int) (*entity.Product, error)
 	Create(ctx context.Context, product *entity.Product) (int, error)
 	Delete(ctx context.Context, id int) (bool, error)
@@ -31,11 +25,10 @@ func (s *Server) Ping(ctx context.Context, req *catalog.PingParams) (*catalog.Pi
 }
 
 func (s *Server) List(ctx context.Context, req *catalog.ListParams) (*catalog.ListResponse, error) {
-	const op = "api.list"
 
-	result, err := s.DB.List(ctx)
+	result, err := s.S.List(ctx)
 	if err != nil {
-		return nil, lib.WrapErr(op, err)
+		return nil, status.Error(codes.Internal, "failed to get list of product")
 	}
 
 	productslist := make([]*catalog.ElementOfList, len(*result))
@@ -51,21 +44,14 @@ func (s *Server) List(ctx context.Context, req *catalog.ListParams) (*catalog.Li
 }
 
 func (s *Server) Get(ctx context.Context, req *catalog.GetRequest) (*catalog.GetResponse, error) {
-	const op = "api.get"
 
-	product, err := s.Cashe.Get(ctx, strconv.Itoa(int(req.Id)))
+	if req.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "id is empty")
+	}
+
+	product, err := s.S.Get(ctx, int(req.GetId()))
 	if err != nil {
-
-		product, err = s.DB.Get(ctx, int(req.Id))
-		if err != nil {
-			return nil, lib.WrapErr(op, err)
-		}
-
-		err = s.Cashe.Set(ctx, strconv.Itoa(int(req.Id)), product)
-		if err != nil {
-			return nil, lib.WrapErr(op, err)
-		}
-
+		return nil, status.Error(codes.Internal, "failed to get a product")
 	}
 
 	return &catalog.GetResponse{
@@ -76,17 +62,23 @@ func (s *Server) Get(ctx context.Context, req *catalog.GetRequest) (*catalog.Get
 }
 
 func (s *Server) Create(ctx context.Context, req *catalog.CreateRequest) (*catalog.CreateResponse, error) {
-	const op = "api.create"
 
-	product := entity.Product{
-		Name:        req.Name,
-		Description: req.Description,
+	if req.GetName() == "" {
+		return nil, status.Error(codes.InvalidArgument, "Name is empty")
 	}
 
-	id, err := s.DB.Create(ctx, &product)
+	if req.GetDescription() == "" {
+		return nil, status.Error(codes.InvalidArgument, "GetDescription is empty")
+	}
 
+	product := entity.Product{
+		Name:        req.GetName(),
+		Description: req.GetDescription(),
+	}
+
+	id, err := s.S.Create(ctx, &product)
 	if err != nil {
-		return &catalog.CreateResponse{}, lib.WrapErr(op, err)
+		return &catalog.CreateResponse{}, status.Error(codes.Internal, "failed to create a product")
 	} else {
 		return &catalog.CreateResponse{
 			Id: int32(id),
@@ -96,12 +88,14 @@ func (s *Server) Create(ctx context.Context, req *catalog.CreateRequest) (*catal
 }
 
 func (s *Server) Delete(ctx context.Context, req *catalog.GetRequest) (*catalog.DeleteResponse, error) {
-	const op = "api.delete"
 
-	result, err := s.DB.Delete(ctx, int(req.Id))
+	if req.GetId() == 0 {
+		return nil, status.Error(codes.InvalidArgument, "Id is empty")
+	}
 
+	result, err := s.S.Delete(ctx, int(req.GetId()))
 	if err != nil {
-		return &catalog.DeleteResponse{}, lib.WrapErr(op, err)
+		return &catalog.DeleteResponse{}, status.Error(codes.Internal, "failed to delete a product")
 	} else {
 		return &catalog.DeleteResponse{
 			Ok: result,

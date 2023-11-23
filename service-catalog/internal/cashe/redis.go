@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/redis/go-redis/v9"
-	entity "v1/internal"
+	"v1/internal/entity"
 	"v1/internal/lib"
 )
 

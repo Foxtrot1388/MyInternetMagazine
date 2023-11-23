@@ -1,2 +1,1 @@
-DROP TABLE entity;
-
+DROP TABLE if not exists entity;
