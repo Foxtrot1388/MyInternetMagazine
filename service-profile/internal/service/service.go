@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"errors"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
+	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
@@ -92,6 +94,11 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 		slog.String("op", op),
 	)
 
+	err := validatePass(pass)
+	if err != nil {
+		return 0, err
+	}
+
 	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error(err.Error())
@@ -131,5 +138,15 @@ func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 	}
 
 	return ok, nil
+
+}
+
+func validatePass(pass string) error {
+
+	return validation.Validate(pass,
+		validation.Required,
+		validation.Length(8, 20),
+		is.UTFLetterNumeric.Error("Разрешенны только символы и цифры"),
+	)
 
 }

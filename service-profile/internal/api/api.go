@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"v1/internal/entity"
@@ -68,10 +69,6 @@ func (s *Server) Get(ctx context.Context, req *profile.GetRequest) (*profile.Get
 
 func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profile.CreateResponse, error) {
 
-	if req.GetPass() == "" {
-		return nil, status.Error(codes.InvalidArgument, "pass is empty")
-	}
-
 	if req.GetLogin() == "" {
 		return nil, status.Error(codes.InvalidArgument, "login is empty")
 	}
@@ -82,7 +79,12 @@ func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profi
 
 	id, err := s.S.Create(ctx, req.GetLogin(), req.GetPass(), req.GetFirstname(), req.GetSecondname(), req.GetLastname(), req.GetEmail())
 	if err != nil {
-		return &profile.CreateResponse{}, status.Error(codes.Internal, "failed to create profile")
+		_, ok := err.(validation.Error)
+		if ok {
+			return &profile.CreateResponse{}, status.Error(codes.InvalidArgument, err.Error())
+		} else {
+			return &profile.CreateResponse{}, status.Error(codes.Internal, "failed to create profile")
+		}
 	} else {
 		return &profile.CreateResponse{
 			Id: int32(id),
