@@ -1,0 +1,38 @@
+version: '3.8'
+services:
+
+  db_profile:
+    container_name: pgdb_profile
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: Profile
+    ports:
+    - "5432:5432"
+    networks:
+    - myinternetmagazine
+
+  profile:
+    container_name: service_profile
+    build:
+      context: .
+      dockerfile: ./Dockerfile
+    restart: always
+    networks:
+    - myinternetmagazine
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_HOST: pgdb_profile
+      POSTGRES_PORT: 5432
+      SIGNING_KEY: example
+    ports:
+    - "8081:8081"
+    depends_on:
+      - db_profile
+
+networks:
+  myinternetmagazine:
+    driver: bridge

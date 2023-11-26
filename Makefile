@@ -5,16 +5,14 @@ gen:
 	make -C service-profile gen
 
 compile:
-	protoc --descriptor_set_out=pb\profile.pb service-profile\proto\profile.proto
-	protoc --descriptor_set_out=pb\catalog.pb service-catalog\proto\catalog.proto
+	protoc --descriptor_set_out=pb\profile.pb proto\profile.proto
+	protoc --descriptor_set_out=pb\catalog.pb proto\catalog.proto
 
-compose: compile
+run: compile
 	docker-compose up -d
 
-kubestart:
-	minikube start
-
 kuberun: compile
+	minikube start
 	docker build service-profile -t myinternetmagazine-profile:latest -f service-profile/Dockerfile
 	minikube image load myinternetmagazine-profile:latest
 	helm install my-internet-magazine-profile charts/profile/ -f charts/profile/dev_values.yaml --set container.image=myinternetmagazine-profile:latest
