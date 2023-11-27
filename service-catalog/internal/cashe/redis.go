@@ -58,3 +58,15 @@ func (r *RedisCache) Set(ctx context.Context, key string, v *entity.Product) err
 	return nil
 
 }
+
+func (r *RedisCache) Invalidate(ctx context.Context, key string) error {
+	const op = "redis.invalidate"
+
+	_, err := r.cli.Del(ctx, key).Result()
+	if err != nil {
+		return lib.WrapErr(op, err)
+	}
+
+	return nil
+
+}

@@ -17,6 +17,7 @@ type Service struct {
 type CasheRepository interface {
 	Get(ctx context.Context, key string) (*entity.Product, error)
 	Set(ctx context.Context, key string, v *entity.Product) error
+	Invalidate(ctx context.Context, key string) error
 }
 
 type DBRepository interface {
@@ -86,6 +87,11 @@ func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 	if err != nil {
 		log.Error(err.Error())
 		return false, lib.WrapErr(op, err)
+	}
+
+	err = s.Cashe.Invalidate(ctx, strconv.Itoa(id))
+	if err != nil {
+		log.Error(err.Error())
 	}
 
 	return result, nil
