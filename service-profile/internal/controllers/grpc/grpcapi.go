@@ -1,4 +1,4 @@
-package api
+package grpcapi
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 
 type Server struct {
 	profile.UnimplementedProfileApiServer
-	S Service
+	s Service
 }
 
 type Service interface {
@@ -19,6 +19,12 @@ type Service interface {
 	Get(ctx context.Context, id int) (*entity.User, error)
 	Create(ctx context.Context, login, pass, fname, sname, lname, email string) (int, error)
 	Delete(ctx context.Context, id int) (bool, error)
+}
+
+func New(s Service) *Server {
+	return &Server{
+		s: s,
+	}
 }
 
 func (s *Server) Ping(ctx context.Context, req *profile.PingParams) (*profile.PingResponse, error) {
@@ -35,7 +41,7 @@ func (s *Server) Login(ctx context.Context, req *profile.LoginRequest) (*profile
 		return nil, status.Error(codes.InvalidArgument, "pass is empty")
 	}
 
-	user, err := s.S.Login(ctx, req.GetLogin(), req.GetPass())
+	user, err := s.s.Login(ctx, req.GetLogin(), req.GetPass())
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to login")
 	}
@@ -52,7 +58,7 @@ func (s *Server) Get(ctx context.Context, req *profile.GetRequest) (*profile.Get
 		return nil, status.Error(codes.InvalidArgument, "id is empty")
 	}
 
-	user, err := s.S.Get(ctx, int(req.GetId()))
+	user, err := s.s.Get(ctx, int(req.GetId()))
 	if err != nil {
 		return nil, status.Error(codes.Internal, "failed to get profile")
 	}
@@ -77,7 +83,7 @@ func (s *Server) Create(ctx context.Context, req *profile.CreateRequest) (*profi
 		return nil, status.Error(codes.InvalidArgument, "email is empty")
 	}
 
-	id, err := s.S.Create(ctx, req.GetLogin(), req.GetPass(), req.GetFirstname(), req.GetSecondname(), req.GetLastname(), req.GetEmail())
+	id, err := s.s.Create(ctx, req.GetLogin(), req.GetPass(), req.GetFirstname(), req.GetSecondname(), req.GetLastname(), req.GetEmail())
 	if err != nil {
 		_, ok := err.(validation.Error)
 		if ok {
@@ -99,7 +105,7 @@ func (s *Server) Delete(ctx context.Context, req *profile.GetRequest) (*profile.
 		return nil, status.Error(codes.InvalidArgument, "id is empty")
 	}
 
-	result, err := s.S.Delete(ctx, int(req.GetId()))
+	result, err := s.s.Delete(ctx, int(req.GetId()))
 	if err != nil {
 		return &profile.DeleteResponse{}, status.Error(codes.Internal, "failed to delete profile")
 	} else {

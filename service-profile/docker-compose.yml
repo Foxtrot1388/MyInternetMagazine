@@ -30,6 +30,7 @@ services:
       SIGNING_KEY: example
     ports:
     - "8081:8081"
+    - "8082:8082"
     depends_on:
       - db_profile
 

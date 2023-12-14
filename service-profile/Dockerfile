@@ -23,5 +23,6 @@ COPY --from=builder /usr/local/go/src/app.exe /
 COPY /migrations /migrations
 
 EXPOSE 8081
+EXPOSE 8082
 
 CMD [ "/app.exe"]
