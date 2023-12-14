@@ -23,6 +23,13 @@ import (
 	"v1/internal/storage/gorm"
 )
 
+// @title Profile API
+// @version 1.0
+// @description API Server for profile
+
+// @host localhost:8082
+// @BasePath /
+
 func main() {
 
 	log := slog.New(

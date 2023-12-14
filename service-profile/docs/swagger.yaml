@@ -1,0 +1,180 @@
+basePath: /
+definitions:
+  httpapi.createResponse:
+    properties:
+      id:
+        type: integer
+    type: object
+  httpapi.deleteResponse:
+    properties:
+      ok:
+        type: boolean
+    type: object
+  httpapi.getResponse:
+    properties:
+      email:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      login:
+        type: string
+      secondname:
+        type: string
+    type: object
+  httpapi.loginUser:
+    properties:
+      login:
+        type: string
+      pass:
+        type: string
+    type: object
+  httpapi.newUser:
+    properties:
+      email:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      login:
+        type: string
+      pass:
+        type: string
+      secondname:
+        type: string
+    type: object
+  httpapi.response:
+    properties:
+      message:
+        type: string
+    type: object
+  httpapi.tokenResponse:
+    properties:
+      token:
+        type: string
+    type: object
+host: localhost:8082
+info:
+  contact: {}
+  description: API Server for profile
+  title: Profile API
+  version: "1.0"
+paths:
+  /ping:
+    get:
+      description: ping
+      operationId: ping
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.response'
+      summary: Ping
+      tags:
+      - other
+  /profile/{user_id}:
+    delete:
+      description: delete
+      operationId: delete
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.deleteResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpapi.response'
+      summary: Delete
+      tags:
+      - profile
+    get:
+      description: get
+      operationId: get
+      parameters:
+      - description: User ID
+        in: path
+        name: user_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.getResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpapi.response'
+      summary: Get
+      tags:
+      - profile
+  /profile/login:
+    post:
+      consumes:
+      - application/json
+      description: login
+      operationId: login
+      parameters:
+      - description: credentials
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.loginUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.tokenResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpapi.response'
+      summary: Login
+      tags:
+      - auth
+  /profile/new:
+    post:
+      consumes:
+      - application/json
+      description: create
+      operationId: create
+      parameters:
+      - description: new
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/httpapi.newUser'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/httpapi.createResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/httpapi.response'
+      summary: Create
+      tags:
+      - profile
+swagger: "2.0"

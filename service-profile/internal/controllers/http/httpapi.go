@@ -4,8 +4,11 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"net/http"
 	"strconv"
+	_ "v1/docs"
 	"v1/internal/entity"
 )
 
@@ -86,15 +89,34 @@ func New(s Service) *Server {
 	server.R.DELETE("/profile/:id", server.delete)
 	server.R.GET("/profile/:id", server.get)
 
+	server.R.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	return &server
 }
 
+// @Summary Ping
+// @Tags other
+// @Description ping
+// @ID ping
+// @Produce json
+// @Success 200 {object} response
+// @Router /ping [get]
 func (s *Server) ping(c *gin.Context) {
 	c.JSON(http.StatusOK, response{
 		Message: "OK",
 	})
 }
 
+// @Summary Create
+// @Tags profile
+// @Description create
+// @ID create
+// @Accept json
+// @Produce json
+// @Param input body newUser true "new"
+// @Success 200 {object} createResponse
+// @Failure 500 {object} response
+// @Router /profile/new [post]
 func (s *Server) create(c *gin.Context) {
 
 	var newUserRequest newUser
@@ -136,6 +158,15 @@ func (s *Server) create(c *gin.Context) {
 
 }
 
+// @Summary Delete
+// @Tags profile
+// @Description delete
+// @ID delete
+// @Produce json
+// @Param user_id path int true "User ID"
+// @Success 200 {object} deleteResponse
+// @Failure 500 {object} response
+// @Router /profile/{user_id} [delete]
 func (s *Server) delete(c *gin.Context) {
 
 	idparam := c.Param("id")
@@ -168,6 +199,15 @@ func (s *Server) delete(c *gin.Context) {
 
 }
 
+// @Summary Get
+// @Tags profile
+// @Description get
+// @ID get
+// @Produce json
+// @Param user_id path int true "User ID"
+// @Success 200 {object} getResponse
+// @Failure 500 {object} response
+// @Router /profile/{user_id} [get]
 func (s *Server) get(c *gin.Context) {
 
 	idparam := c.Param("id")
@@ -194,7 +234,7 @@ func (s *Server) get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusInternalServerError, getResponse{
+	c.JSON(http.StatusOK, getResponse{
 		Login:      user.Login,
 		Firstname:  user.Firstname,
 		Secondname: user.Secondname,
@@ -204,6 +244,16 @@ func (s *Server) get(c *gin.Context) {
 
 }
 
+// @Summary Login
+// @Tags auth
+// @Description login
+// @ID login
+// @Accept json
+// @Produce json
+// @Param input body loginUser true "credentials"
+// @Success 200 {object} tokenResponse
+// @Failure 500 {object} response
+// @Router /profile/login [post]
 func (s *Server) login(c *gin.Context) {
 
 	var UserRequest loginUser
