@@ -59,12 +59,17 @@ func (s *Service) Get(ctx context.Context, id int) (*entity.Product, error) {
 
 }
 
-func (s *Service) Create(ctx context.Context, product *entity.Product) (int, error) {
+func (s *Service) Create(ctx context.Context, name string, description string) (int, error) {
 	const op = "service.create"
 
 	log := s.log.With(
 		slog.String("op", op),
 	)
+
+	product := &entity.Product{
+		Name:        name,
+		Description: description,
+	}
 
 	id, err := s.DB.Create(ctx, product)
 	if err != nil {

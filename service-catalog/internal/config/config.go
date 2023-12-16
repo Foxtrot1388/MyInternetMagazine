@@ -27,7 +27,7 @@ func Get() *Config {
 	once.Do(func() {
 		instance = &Config{
 			Host: getEnv("POSTGRES_HOST", "localhost"),
-			Port: getEnv("POSTGRES_PORT", "5433"),
+			Port: getEnv("POSTGRES_PORT", "5432"),
 			User: getEnv("POSTGRES_USER", "root"),
 			Pass: getEnv("POSTGRES_PASSWORD", "root"),
 			Cashe: CasheConfig{

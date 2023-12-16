@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/gin-gonic/gin"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -13,14 +14,22 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"v1/internal/api"
 	"v1/internal/cashe"
 	"v1/internal/catalog/proto"
 	"v1/internal/config"
+	grpcapi "v1/internal/controllers/grpc"
+	httpapi "v1/internal/controllers/http"
 	"v1/internal/lib"
 	"v1/internal/service"
 	"v1/internal/storage/gorm"
 )
+
+// @title Catalog API
+// @version 1.0
+// @description API Server for catalog
+
+// @host localhost:8082
+// @BasePath /
 
 func main() {
 
@@ -50,12 +59,14 @@ func main() {
 	}
 
 	usercases := service.New(log, db, cashedb)
-	srv := api.Server{S: usercases}
+	srvgrpc := grpcapi.New(usercases)
 	s := grpc.NewServer()
-	catalog.RegisterCatalogApiServer(s, &srv)
+	catalog.RegisterCatalogApiServer(s, srvgrpc)
+	srvhttp := httpapi.New(usercases)
 
 	log.Info("start listen")
-	go mustListen(log, s)
+	go mustListenGrpc(log, s)
+	go mustListenHTTP(log, srvhttp.R)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
@@ -65,7 +76,7 @@ func main() {
 
 }
 
-func mustListen(log *slog.Logger, s *grpc.Server) {
+func mustListenGrpc(log *slog.Logger, s *grpc.Server) {
 
 	l, err := net.Listen("tcp", ":8081")
 	if err != nil {
@@ -74,6 +85,15 @@ func mustListen(log *slog.Logger, s *grpc.Server) {
 	}
 
 	if err = s.Serve(l); err != nil {
+		log.Error(err.Error())
+		panic(err)
+	}
+
+}
+
+func mustListenHTTP(log *slog.Logger, r *gin.Engine) {
+
+	if err := r.Run(":8082"); err != nil {
 		log.Error(err.Error())
 		panic(err)
 	}
