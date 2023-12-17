@@ -21,6 +21,7 @@ import (
 	"v1/internal/profile/proto"
 	"v1/internal/service"
 	"v1/internal/storage/gorm"
+	kafkastorage "v1/internal/storage/kafka"
 )
 
 // @title Profile API
@@ -51,7 +52,8 @@ func main() {
 		panic(err)
 	}
 
-	usercases := service.New(log, db, cfg.SigningKey)
+	kafkasender := kafkastorage.New(cfg.KafkaHost)
+	usercases := service.New(log, db, cfg.SigningKey, kafkasender)
 	srvgrpc := grpcapi.New(usercases)
 	s := grpc.NewServer()
 	profile.RegisterProfileApiServer(s, srvgrpc)

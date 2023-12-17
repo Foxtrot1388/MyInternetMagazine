@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
@@ -15,6 +16,7 @@ import (
 
 type Service struct {
 	DB         Repository
+	Bus        KafkaSender
 	log        *slog.Logger
 	signingkey string
 }
@@ -26,8 +28,12 @@ type Repository interface {
 	Delete(ctx context.Context, id int) (bool, error)
 }
 
-func New(log *slog.Logger, DB Repository, signingkey string) *Service {
-	return &Service{DB: DB, log: log, signingkey: signingkey}
+type KafkaSender interface {
+	Send(v []byte, topic string) error
+}
+
+func New(log *slog.Logger, DB Repository, signingkey string, Bus KafkaSender) *Service {
+	return &Service{DB: DB, log: log, signingkey: signingkey, Bus: Bus}
 }
 
 var (
@@ -120,7 +126,40 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 		return 0, lib.WrapErr(op, err)
 	}
 
+	if user.Email != "" && s.Bus != nil {
+		go s.sendRegistrationEmail(user)
+	}
+
 	return id, nil
+
+}
+
+func (s *Service) sendRegistrationEmail(user *entity.NewUser) {
+	const op = "service.sendRegistrationEmail"
+
+	log := s.log.With(
+		slog.String("op", op),
+	)
+
+	kmes := struct {
+		MessageType string            `json:"messagetype"`
+		Data        map[string]string `json:"data"`
+	}{
+		MessageType: "Registartion",
+		Data:        map[string]string{"email": user.Email, "Login": user.Login},
+	}
+
+	value, err := json.Marshal(kmes)
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
+
+	err = s.Bus.Send([]byte(value), "email")
+	if err != nil {
+		log.Error(err.Error())
+		return
+	}
 
 }
 
