@@ -6,13 +6,12 @@ services:
     image: devopsfaith/krakend:2.4.6
     restart: always
     volumes:
-      - "./krakend.json:/etc/krakend/krakend.json"
-      - "./pb/:/etc/krakend/pb/"
+      - ./config:/etc/krakend
     networks:
       - myinternetmagazine
     ports:
       - "8080:8080"
-    command: ["run","-c","krakend.json"]
+    command: ["run","-d","-c","/etc/krakend/krakend.json"]
 
   kafka:
     image: 'bitnami/kafka:latest'

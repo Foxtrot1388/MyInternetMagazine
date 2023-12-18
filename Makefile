@@ -8,7 +8,7 @@ compile:
 	protoc --descriptor_set_out=pb\profile.pb proto\profile.proto
 	protoc --descriptor_set_out=pb\catalog.pb proto\catalog.proto
 
-run: compile
+run:
 	docker-compose up -d
 
 kuberun: compile
