@@ -145,7 +145,7 @@ func (s *Service) sendRegistrationEmail(user *entity.NewUser) {
 		MessageType string            `json:"messagetype"`
 		Data        map[string]string `json:"data"`
 	}{
-		MessageType: "Registartion",
+		MessageType: "Registration",
 		Data:        map[string]string{"email": user.Email, "Login": user.Login},
 	}
 

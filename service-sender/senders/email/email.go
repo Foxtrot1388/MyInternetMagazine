@@ -25,7 +25,7 @@ func SendEmail(cfg *config.Config, value []byte) error {
 	}
 
 	switch mes.MessageType {
-	case "Registartion":
+	case "Registration":
 		err = SendRegistrationEmail(cfg, mes.Data)
 	default:
 		err = errors.New("no message type for email")
