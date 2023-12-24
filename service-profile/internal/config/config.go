@@ -27,7 +27,7 @@ func Get() *Config {
 			User:       getEnv("POSTGRES_USER", "root"),
 			Pass:       getEnv("POSTGRES_PASSWORD", "root"),
 			SigningKey: getEnv("SIGNING_KEY", ""),
-			KafkaHost:  getEnv("KAFKA_HOST", ""),
+			KafkaHost:  getEnv("KAFKA_HOST", "kafka"),
 		}
 	})
 	return instance
