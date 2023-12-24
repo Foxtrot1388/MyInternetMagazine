@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"time"
 	"v1/internal/entity"
-	"v1/internal/lib"
+	liberrors "v1/internal/lib/errors"
 )
 
 type Service struct {
@@ -50,12 +50,12 @@ func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginU
 	userdb, err := s.DB.Login(ctx, login)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, lib.WrapErr(op, ErrInvalidCredentials)
+		return nil, liberrors.WrapErr(op, ErrInvalidCredentials)
 	}
 
 	if err := bcrypt.CompareHashAndPassword(userdb.Pass, []byte(pass)); err != nil {
 		log.Error(err.Error())
-		return nil, lib.WrapErr(op, ErrInvalidCredentials)
+		return nil, liberrors.WrapErr(op, ErrInvalidCredentials)
 	}
 
 	token := jwt.New(jwt.SigningMethodHS256)
@@ -67,7 +67,7 @@ func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginU
 	tokenString, err := token.SignedString([]byte(s.signingkey))
 	if err != nil {
 		log.Error(err.Error())
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 
 	return &entity.LoginUser{
@@ -86,7 +86,7 @@ func (s *Service) Get(ctx context.Context, id int) (*entity.User, error) {
 	user, err := s.DB.Get(ctx, id)
 	if err != nil {
 		log.Error(err.Error())
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 
 	return user, nil
@@ -108,7 +108,7 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {
 		log.Error(err.Error())
-		return 0, lib.WrapErr(op, err)
+		return 0, liberrors.WrapErr(op, err)
 	}
 
 	user := &entity.NewUser{
@@ -123,7 +123,7 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 	id, err := s.DB.Create(ctx, user)
 	if err != nil {
 		log.Error(err.Error())
-		return 0, lib.WrapErr(op, err)
+		return 0, liberrors.WrapErr(op, err)
 	}
 
 	if user.Email != "" && s.Bus != nil {
@@ -173,7 +173,7 @@ func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 	ok, err := s.DB.Delete(ctx, id)
 	if err != nil {
 		log.Error(err.Error())
-		return false, lib.WrapErr(op, err)
+		return false, liberrors.WrapErr(op, err)
 	}
 
 	return ok, nil

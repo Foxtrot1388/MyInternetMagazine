@@ -5,7 +5,7 @@ import (
 	postgresgorm "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"v1/internal/entity"
-	"v1/internal/lib"
+	liberrors "v1/internal/lib/errors"
 )
 
 type Storage struct {
@@ -17,7 +17,7 @@ func New(connection string) (*Storage, error) {
 
 	db, err := gorm.Open(postgresgorm.Open(connection), &gorm.Config{})
 	if err != nil {
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 	return &Storage{db: db.Table("users")}, nil
 }
@@ -28,7 +28,7 @@ func (s *Storage) Login(ctx context.Context, login string) (*entity.UserDB, erro
 	var user entity.UserDB
 	err := s.db.WithContext(ctx).Where("login = ?", login).First(&user).Error
 	if err != nil {
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 
 	return &user, nil
@@ -41,7 +41,7 @@ func (s *Storage) Get(ctx context.Context, id int) (*entity.User, error) {
 	var user entity.User
 	err := s.db.WithContext(ctx).Take(&user, id).Error
 	if err != nil {
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 
 	return &user, nil
@@ -54,7 +54,7 @@ func (s *Storage) Create(ctx context.Context, user *entity.NewUser) (int, error)
 	err := s.db.WithContext(ctx).Create(&user).Error
 
 	if err != nil {
-		return 0, lib.WrapErr(op, err)
+		return 0, liberrors.WrapErr(op, err)
 	} else {
 		return user.Id, nil
 	}
@@ -70,7 +70,7 @@ func (s *Storage) Delete(ctx context.Context, id int) (bool, error) {
 
 	err := s.db.WithContext(ctx).Delete(&DeleteUserRequest{Id: id}).Error
 	if err != nil {
-		return false, lib.WrapErr(op, err)
+		return false, liberrors.WrapErr(op, err)
 	}
 
 	return true, nil

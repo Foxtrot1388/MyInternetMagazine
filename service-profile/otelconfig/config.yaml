@@ -1,0 +1,40 @@
+receivers:
+    otlp:
+        protocols:
+            grpc:
+                endpoint: "0.0.0.0:4317"
+            http:
+                endpoint: localhost:4318
+
+    postgresql:
+        endpoint: pgdb_profile:5432
+        # transport: tcp
+        username: root
+        password: root
+        databases:
+            - Profile
+        tls:
+            insecure: true
+
+exporters:
+  debug:
+    verbosity: detailed
+
+processors:
+    batch:
+      timeout: 10s
+    memory_limiter:
+      check_interval: 1s
+      limit_percentage: 50
+      spike_limit_percentage: 30
+  
+service:
+    pipelines:
+      metrics:
+        receivers: [otlp]
+        exporters: [debug]
+        processors: [memory_limiter, batch]
+      traces:
+        receivers: [otlp]
+        exporters: [debug]
+        processors: [memory_limiter, batch]

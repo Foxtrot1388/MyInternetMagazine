@@ -6,6 +6,10 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strconv"
 	_ "v1/docs"
@@ -76,12 +80,16 @@ type getResponse struct {
 	Email      string `json:"email"`
 }
 
+var tracer = otel.Tracer("gin-server")
+
 func New(s Service) *Server {
 
 	server := Server{
 		s: s,
 		R: gin.Default(),
 	}
+
+	server.R.Use(otelgin.Middleware("my-server"))
 
 	server.R.GET("/ping", server.ping)
 	server.R.POST("/profile/new", server.create)
@@ -126,6 +134,18 @@ func (s *Server) create(c *gin.Context) {
 		})
 		return
 	}
+
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("Login", newUserRequest.Login),
+		attribute.String("Pass", newUserRequest.Pass),
+		attribute.String("Lastname", newUserRequest.Lastname),
+		attribute.String("Secondname", newUserRequest.Secondname),
+		attribute.String("Firstname", newUserRequest.Firstname),
+		attribute.String("Email", newUserRequest.Email),
+	}
+
+	_, span := tracer.Start(c.Request.Context(), "get", oteltrace.WithAttributes(commonAttrs...))
+	defer span.End()
 
 	err := newUserRequest.Validate()
 	if err != nil {
@@ -177,6 +197,9 @@ func (s *Server) delete(c *gin.Context) {
 		return
 	}
 
+	_, span := tracer.Start(c.Request.Context(), "delete", oteltrace.WithAttributes(attribute.String("id", idparam)))
+	defer span.End()
+
 	id, err := strconv.Atoi(idparam)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
@@ -217,6 +240,9 @@ func (s *Server) get(c *gin.Context) {
 		})
 		return
 	}
+
+	_, span := tracer.Start(c.Request.Context(), "get", oteltrace.WithAttributes(attribute.String("id", idparam)))
+	defer span.End()
 
 	id, err := strconv.Atoi(idparam)
 	if err != nil {
@@ -263,6 +289,14 @@ func (s *Server) login(c *gin.Context) {
 		})
 		return
 	}
+
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("Login", UserRequest.Login),
+		attribute.String("Pass", UserRequest.Pass),
+	}
+
+	_, span := tracer.Start(c.Request.Context(), "get", oteltrace.WithAttributes(commonAttrs...))
+	defer span.End()
 
 	err := UserRequest.Validate()
 	if err != nil {
