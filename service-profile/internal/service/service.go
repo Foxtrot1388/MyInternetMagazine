@@ -7,12 +7,15 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/golang-jwt/jwt/v5"
+	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
 	"log/slog"
 	"time"
 	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
 )
+
+var tracer = otel.Tracer("profile-server")
 
 type Service struct {
 	DB         Repository
@@ -43,11 +46,14 @@ var (
 func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginUser, error) {
 	const op = "service.login"
 
+	ctxspan, span := tracer.Start(ctx, "service_login")
+	defer span.End()
+
 	log := s.log.With(
 		slog.String("op", op),
 	)
 
-	userdb, err := s.DB.Login(ctx, login)
+	userdb, err := s.DB.Login(ctxspan, login)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, liberrors.WrapErr(op, ErrInvalidCredentials)
@@ -57,6 +63,8 @@ func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginU
 		log.Error(err.Error())
 		return nil, liberrors.WrapErr(op, ErrInvalidCredentials)
 	}
+
+	span.AddEvent("Get and Compare pass ok")
 
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
@@ -79,11 +87,14 @@ func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginU
 func (s *Service) Get(ctx context.Context, id int) (*entity.User, error) {
 	const op = "service.get"
 
+	ctxspan, span := tracer.Start(ctx, "service_get")
+	defer span.End()
+
 	log := s.log.With(
 		slog.String("op", op),
 	)
 
-	user, err := s.DB.Get(ctx, id)
+	user, err := s.DB.Get(ctxspan, id)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, liberrors.WrapErr(op, err)
@@ -96,6 +107,9 @@ func (s *Service) Get(ctx context.Context, id int) (*entity.User, error) {
 func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, email string) (int, error) {
 	const op = "service.create"
 
+	ctxspan, span := tracer.Start(ctx, "service_create")
+	defer span.End()
+
 	log := s.log.With(
 		slog.String("op", op),
 	)
@@ -104,6 +118,8 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 	if err != nil {
 		return 0, err
 	}
+
+	span.AddEvent("validatePass ok")
 
 	passHash, err := bcrypt.GenerateFromPassword([]byte(pass), bcrypt.DefaultCost)
 	if err != nil {
@@ -120,22 +136,25 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 		Email:      email,
 	}
 
-	id, err := s.DB.Create(ctx, user)
+	id, err := s.DB.Create(ctxspan, user)
 	if err != nil {
 		log.Error(err.Error())
 		return 0, liberrors.WrapErr(op, err)
 	}
 
 	if user.Email != "" && s.Bus != nil {
-		go s.sendRegistrationEmail(user)
+		go s.sendRegistrationEmail(ctxspan, user)
 	}
 
 	return id, nil
 
 }
 
-func (s *Service) sendRegistrationEmail(user *entity.NewUser) {
+func (s *Service) sendRegistrationEmail(ctx context.Context, user *entity.NewUser) {
 	const op = "service.sendRegistrationEmail"
+
+	_, span := tracer.Start(ctx, "service_sendRegistrationEmail")
+	defer span.End()
 
 	log := s.log.With(
 		slog.String("op", op),
@@ -166,11 +185,14 @@ func (s *Service) sendRegistrationEmail(user *entity.NewUser) {
 func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 	const op = "service.delete"
 
+	ctxspan, span := tracer.Start(ctx, "service_delete")
+	defer span.End()
+
 	log := s.log.With(
 		slog.String("op", op),
 	)
 
-	ok, err := s.DB.Delete(ctx, id)
+	ok, err := s.DB.Delete(ctxspan, id)
 	if err != nil {
 		log.Error(err.Error())
 		return false, liberrors.WrapErr(op, err)

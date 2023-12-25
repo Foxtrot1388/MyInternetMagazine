@@ -9,6 +9,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"net/http"
 	"strconv"
@@ -80,7 +81,7 @@ type getResponse struct {
 	Email      string `json:"email"`
 }
 
-var tracer = otel.Tracer("gin-server")
+var tracer = otel.Tracer("profile-server")
 
 func New(s Service) *Server {
 
@@ -144,7 +145,7 @@ func (s *Server) create(c *gin.Context) {
 		attribute.String("Email", newUserRequest.Email),
 	}
 
-	_, span := tracer.Start(c.Request.Context(), "get", oteltrace.WithAttributes(commonAttrs...))
+	ctx, span := tracer.Start(c, "http_create", oteltrace.WithAttributes(commonAttrs...))
 	defer span.End()
 
 	err := newUserRequest.Validate()
@@ -152,10 +153,13 @@ func (s *Server) create(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: err.Error(),
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	id, err := s.s.Create(c, newUserRequest.Login, newUserRequest.Pass, newUserRequest.Firstname,
+	span.AddEvent("validation ok")
+
+	id, err := s.s.Create(ctx, newUserRequest.Login, newUserRequest.Pass, newUserRequest.Firstname,
 		newUserRequest.Secondname, newUserRequest.Lastname, newUserRequest.Email)
 	if err != nil {
 		_, ok := err.(validation.Error)
@@ -163,11 +167,13 @@ func (s *Server) create(c *gin.Context) {
 			c.JSON(http.StatusInternalServerError, response{
 				Message: err.Error(),
 			})
+			span.SetStatus(otelcodes.Error, err.Error())
 			return
 		} else {
 			c.JSON(http.StatusInternalServerError, response{
 				Message: "failed to create profile",
 			})
+			span.SetStatus(otelcodes.Error, err.Error())
 			return
 		}
 	} else {
@@ -197,7 +203,7 @@ func (s *Server) delete(c *gin.Context) {
 		return
 	}
 
-	_, span := tracer.Start(c.Request.Context(), "delete", oteltrace.WithAttributes(attribute.String("id", idparam)))
+	ctx, span := tracer.Start(c, "http_delete", oteltrace.WithAttributes(attribute.String("id", idparam)))
 	defer span.End()
 
 	id, err := strconv.Atoi(idparam)
@@ -205,14 +211,16 @@ func (s *Server) delete(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to delete profile",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	result, err := s.s.Delete(c, id)
+	result, err := s.s.Delete(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to delete profile",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	} else {
 		c.JSON(http.StatusOK, deleteResponse{
@@ -241,7 +249,7 @@ func (s *Server) get(c *gin.Context) {
 		return
 	}
 
-	_, span := tracer.Start(c.Request.Context(), "get", oteltrace.WithAttributes(attribute.String("id", idparam)))
+	ctx, span := tracer.Start(c.Request.Context(), "http_get", oteltrace.WithAttributes(attribute.String("id", idparam)))
 	defer span.End()
 
 	id, err := strconv.Atoi(idparam)
@@ -249,14 +257,16 @@ func (s *Server) get(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to get profile",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	user, err := s.s.Get(c, id)
+	user, err := s.s.Get(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to get profile",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
@@ -295,7 +305,7 @@ func (s *Server) login(c *gin.Context) {
 		attribute.String("Pass", UserRequest.Pass),
 	}
 
-	_, span := tracer.Start(c.Request.Context(), "get", oteltrace.WithAttributes(commonAttrs...))
+	ctx, span := tracer.Start(c.Request.Context(), "http_login", oteltrace.WithAttributes(commonAttrs...))
 	defer span.End()
 
 	err := UserRequest.Validate()
@@ -303,14 +313,18 @@ func (s *Server) login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: err.Error(),
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	user, err := s.s.Login(c, UserRequest.Login, UserRequest.Pass)
+	span.AddEvent("validate ok")
+
+	user, err := s.s.Login(ctx, UserRequest.Login, UserRequest.Pass)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to login",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 

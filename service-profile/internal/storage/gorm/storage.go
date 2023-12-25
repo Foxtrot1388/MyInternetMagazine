@@ -2,11 +2,14 @@ package storage
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
 	postgresgorm "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
 )
+
+var tracer = otel.Tracer("profile-server")
 
 type Storage struct {
 	db *gorm.DB
@@ -25,8 +28,11 @@ func New(connection string) (*Storage, error) {
 func (s *Storage) Login(ctx context.Context, login string) (*entity.UserDB, error) {
 	const op = "gorm.login"
 
+	ctxspan, span := tracer.Start(ctx, "gorm_login")
+	defer span.End()
+
 	var user entity.UserDB
-	err := s.db.WithContext(ctx).Where("login = ?", login).First(&user).Error
+	err := s.db.WithContext(ctxspan).Where("login = ?", login).First(&user).Error
 	if err != nil {
 		return nil, liberrors.WrapErr(op, err)
 	}
@@ -38,8 +44,11 @@ func (s *Storage) Login(ctx context.Context, login string) (*entity.UserDB, erro
 func (s *Storage) Get(ctx context.Context, id int) (*entity.User, error) {
 	const op = "gorm.get"
 
+	ctxspan, span := tracer.Start(ctx, "gorm_get")
+	defer span.End()
+
 	var user entity.User
-	err := s.db.WithContext(ctx).Take(&user, id).Error
+	err := s.db.WithContext(ctxspan).Take(&user, id).Error
 	if err != nil {
 		return nil, liberrors.WrapErr(op, err)
 	}
@@ -51,7 +60,10 @@ func (s *Storage) Get(ctx context.Context, id int) (*entity.User, error) {
 func (s *Storage) Create(ctx context.Context, user *entity.NewUser) (int, error) {
 	const op = "gorm.create"
 
-	err := s.db.WithContext(ctx).Create(&user).Error
+	ctxspan, span := tracer.Start(ctx, "gorm_create")
+	defer span.End()
+
+	err := s.db.WithContext(ctxspan).Create(&user).Error
 
 	if err != nil {
 		return 0, liberrors.WrapErr(op, err)
@@ -64,11 +76,14 @@ func (s *Storage) Create(ctx context.Context, user *entity.NewUser) (int, error)
 func (s *Storage) Delete(ctx context.Context, id int) (bool, error) {
 	const op = "gorm.delete"
 
+	ctxspan, span := tracer.Start(ctx, "gorm_delete")
+	defer span.End()
+
 	type DeleteUserRequest struct {
 		Id int
 	}
 
-	err := s.db.WithContext(ctx).Delete(&DeleteUserRequest{Id: id}).Error
+	err := s.db.WithContext(ctxspan).Delete(&DeleteUserRequest{Id: id}).Error
 	if err != nil {
 		return false, liberrors.WrapErr(op, err)
 	}
