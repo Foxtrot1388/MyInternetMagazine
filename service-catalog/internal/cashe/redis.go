@@ -3,10 +3,15 @@ package cashe
 import (
 	"context"
 	"encoding/json"
-	"github.com/redis/go-redis/v9"
 	"v1/internal/entity"
-	"v1/internal/lib"
+	liberrors "v1/internal/lib/errors"
+
+	"go.opentelemetry.io/otel"
+
+	"github.com/redis/go-redis/v9"
 )
+
+var tracer = otel.Tracer("profile-server")
 
 type RedisCache struct {
 	cli *redis.Client
@@ -21,21 +26,24 @@ func New(redisHost string) (*RedisCache, error) {
 		DB:       0,  // use default DB
 	})
 	_, err := rdb.Ping(context.Background()).Result()
-	return &RedisCache{cli: rdb}, lib.WrapErr(op, err)
+	return &RedisCache{cli: rdb}, liberrors.WrapErr(op, err)
 }
 
 func (r *RedisCache) Get(ctx context.Context, key string) (*entity.Product, error) {
 	const op = "redis.get"
 
-	result, err := r.cli.Get(ctx, key).Result()
+	ctxspan, span := tracer.Start(ctx, "redis_get")
+	defer span.End()
+
+	result, err := r.cli.Get(ctxspan, key).Result()
 	if err != nil {
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 
 	var v entity.Product
 	err = json.Unmarshal([]byte(result), &v)
 	if err != nil {
-		return nil, lib.WrapErr(op, err)
+		return nil, liberrors.WrapErr(op, err)
 	}
 
 	return &v, nil
@@ -45,14 +53,17 @@ func (r *RedisCache) Get(ctx context.Context, key string) (*entity.Product, erro
 func (r *RedisCache) Set(ctx context.Context, key string, v *entity.Product) error {
 	const op = "redis.set"
 
+	ctxspan, span := tracer.Start(ctx, "redis_set")
+	defer span.End()
+
 	res, err := json.Marshal(v)
 	if err != nil {
-		return lib.WrapErr(op, err)
+		return liberrors.WrapErr(op, err)
 	}
 
-	err = r.cli.Set(ctx, key, res, 0).Err()
+	err = r.cli.Set(ctxspan, key, res, 0).Err()
 	if err != nil {
-		return lib.WrapErr(op, err)
+		return liberrors.WrapErr(op, err)
 	}
 
 	return nil
@@ -62,9 +73,12 @@ func (r *RedisCache) Set(ctx context.Context, key string, v *entity.Product) err
 func (r *RedisCache) Invalidate(ctx context.Context, key string) error {
 	const op = "redis.invalidate"
 
-	_, err := r.cli.Del(ctx, key).Result()
+	ctxspan, span := tracer.Start(ctx, "redis_invalidate")
+	defer span.End()
+
+	_, err := r.cli.Del(ctxspan, key).Result()
 	if err != nil {
-		return lib.WrapErr(op, err)
+		return liberrors.WrapErr(op, err)
 	}
 
 	return nil

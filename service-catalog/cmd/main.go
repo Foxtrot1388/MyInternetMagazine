@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -15,7 +16,8 @@ import (
 	"v1/internal/config"
 	grpcapi "v1/internal/controllers/grpc"
 	httpapi "v1/internal/controllers/http"
-	"v1/internal/lib"
+	liberrors "v1/internal/lib/errors"
+	libtrace "v1/internal/lib/trace"
 	"v1/internal/service"
 	storage "v1/internal/storage/gorm"
 
@@ -39,10 +41,15 @@ func main() {
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
 	)
 
+	tp, err := libtrace.InitTracer()
+	if err != nil {
+		panic(err)
+	}
+
 	cfg := config.Get()
 	connection := getConnectionString(cfg)
 
-	err := migrateDB(connection)
+	err = migrateDB(connection)
 	if err != nil {
 		log.Error(err.Error())
 		panic(err)
@@ -76,6 +83,9 @@ func main() {
 	log.Info("graceful stop")
 	atomic.StoreInt32(healthyhttp, 0)
 	atomic.StoreInt32(readyhttp, 0)
+	if err = tp.Shutdown(context.Background()); err != nil {
+		log.Info("Error shutting down tracer provider: %v", err)
+	}
 	s.GracefulStop()
 
 }
@@ -117,7 +127,7 @@ func getConnectionStringCashe(cfg *config.CasheConfig) string {
 
 func migrateDB(connection string) (err error) {
 	const op = "main.migrateDB"
-	defer func() { err = lib.WrapErr(op, err) }()
+	defer func() { err = liberrors.WrapErr(op, err) }()
 
 	db, err := sql.Open("postgres", connection)
 	if err != nil {

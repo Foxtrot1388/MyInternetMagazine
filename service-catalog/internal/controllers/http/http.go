@@ -12,11 +12,17 @@ import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
+	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
 var (
 	healthy int32
 	ready   int32
+	tracer  = otel.Tracer("gin-server")
 )
 
 type Server struct {
@@ -73,6 +79,8 @@ func New(s Service) (*Server, *int32, *int32) {
 		s: s,
 		R: gin.Default(),
 	}
+
+	server.R.Use(otelgin.Middleware("my-server"))
 
 	server.R.POST("/catalog/new", server.create)
 	server.R.DELETE("/catalog/:id", server.delete)
@@ -156,11 +164,15 @@ func (s *Server) disableReady(c *gin.Context) {
 // @Router /catalog/ [get]
 func (s *Server) list(c *gin.Context) {
 
-	result, err := s.s.List(c)
+	ctx, span := tracer.Start(c.Request.Context(), "http_list")
+	defer span.End()
+
+	result, err := s.s.List(ctx)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to get list of product",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
@@ -195,19 +207,24 @@ func (s *Server) get(c *gin.Context) {
 		return
 	}
 
+	ctx, span := tracer.Start(c.Request.Context(), "http_get", oteltrace.WithAttributes(attribute.String("id", idparam)))
+	defer span.End()
+
 	id, err := strconv.Atoi(idparam)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to get product",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	product, err := s.s.Get(c, id)
+	product, err := s.s.Get(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to get a product",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
@@ -238,19 +255,31 @@ func (s *Server) create(c *gin.Context) {
 		return
 	}
 
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("Description", newCatalogRequest.Description),
+		attribute.String("Name", newCatalogRequest.Name),
+	}
+
+	ctx, span := tracer.Start(c, "http_create", oteltrace.WithAttributes(commonAttrs...))
+	defer span.End()
+
 	err := newCatalogRequest.Validate()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: err.Error(),
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	id, err := s.s.Create(c, newCatalogRequest.Name, newCatalogRequest.Description)
+	span.AddEvent("validation ok")
+
+	id, err := s.s.Create(ctx, newCatalogRequest.Name, newCatalogRequest.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to create a product",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	} else {
 		c.JSON(http.StatusOK, createResponse{
@@ -279,19 +308,24 @@ func (s *Server) delete(c *gin.Context) {
 		return
 	}
 
+	ctx, span := tracer.Start(c.Request.Context(), "http_delete", oteltrace.WithAttributes(attribute.String("id", idparam)))
+	defer span.End()
+
 	id, err := strconv.Atoi(idparam)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to delete catalog",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
-	result, err := s.s.Delete(c, id)
+	result, err := s.s.Delete(ctx, id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to delete a catalog",
 		})
+		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	} else {
 		c.JSON(http.StatusOK, deleteResponse{
