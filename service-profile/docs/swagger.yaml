@@ -62,20 +62,21 @@ info:
   title: Profile API
   version: "1.0"
 paths:
-  /ping:
+  /healthz:
     get:
-      description: ping
-      operationId: ping
+      consumes:
+      - application/json
+      description: used by Kubernetes liveness probe
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/httpapi.response'
-      summary: Ping
+            type: string
+      summary: Liveness check
       tags:
-      - other
+      - Kubernetes
   /profile/{user_id}:
     delete:
       description: delete
@@ -177,4 +178,50 @@ paths:
       summary: Create
       tags:
       - profile
+  /readyz:
+    get:
+      consumes:
+      - application/json
+      description: used by Kubernetes readiness probe
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Readiness check
+      tags:
+      - Kubernetes
+  /readyz/disable:
+    post:
+      consumes:
+      - application/json
+      description: signals the Kubernetes LB to stop sending requests to this instance
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: OK
+          schema:
+            type: string
+      summary: Disable ready state
+      tags:
+      - Kubernetes
+  /readyz/enable:
+    post:
+      consumes:
+      - application/json
+      description: signals the Kubernetes LB that this instance is ready to receive
+        traffic
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: OK
+          schema:
+            type: string
+      summary: Enable ready state
+      tags:
+      - Kubernetes
 swagger: "2.0"

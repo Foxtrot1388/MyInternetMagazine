@@ -156,22 +156,93 @@ const docTemplate = `{
                 }
             }
         },
-        "/ping": {
+        "/healthz": {
             "get": {
-                "description": "ping",
+                "description": "used by Kubernetes liveness probe",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "other"
+                    "Kubernetes"
                 ],
-                "summary": "Ping",
-                "operationId": "ping",
+                "summary": "Liveness check",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/httpapi.response"
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz": {
+            "get": {
+                "description": "used by Kubernetes readiness probe",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kubernetes"
+                ],
+                "summary": "Readiness check",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz/disable": {
+            "post": {
+                "description": "signals the Kubernetes LB to stop sending requests to this instance",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kubernetes"
+                ],
+                "summary": "Disable ready state",
+                "responses": {
+                    "202": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/readyz/enable": {
+            "post": {
+                "description": "signals the Kubernetes LB that this instance is ready to receive traffic",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Kubernetes"
+                ],
+                "summary": "Enable ready state",
+                "responses": {
+                    "202": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }

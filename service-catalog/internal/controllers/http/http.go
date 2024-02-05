@@ -2,14 +2,21 @@ package httpapi
 
 import (
 	"context"
+	"net/http"
+	"strconv"
+	"sync/atomic"
+	_ "v1/docs"
+	"v1/internal/entity"
+
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"net/http"
-	"strconv"
-	_ "v1/docs"
-	"v1/internal/entity"
+)
+
+var (
+	healthy int32
+	ready   int32
 )
 
 type Server struct {
@@ -60,35 +67,83 @@ func (a newCatalog) Validate() error {
 	)
 }
 
-func New(s Service) *Server {
+func New(s Service) (*Server, *int32, *int32) {
 
 	server := Server{
 		s: s,
 		R: gin.Default(),
 	}
 
-	server.R.GET("/ping", server.ping)
 	server.R.POST("/catalog/new", server.create)
 	server.R.DELETE("/catalog/:id", server.delete)
 	server.R.GET("/catalog/:id", server.get)
 	server.R.GET("/catalog/", server.list)
+	server.R.GET("/healthz/", server.healthz)
+	server.R.GET("/readyz/", server.readyz)
+	server.R.POST("/readyz/enable/", server.enableReady)
+	server.R.POST("/readyz/disable/", server.disableReady)
 
 	server.R.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	return &server
+	return &server, &healthy, &ready
 }
 
-// @Summary Ping
-// @Tags other
-// @Description ping
-// @ID ping
+// Healthz godoc
+// @Summary Liveness check
+// @Description used by Kubernetes liveness probe
+// @Tags Kubernetes
+// @Accept json
 // @Produce json
-// @Success 200 {object} response
-// @Router /ping [get]
-func (s *Server) ping(c *gin.Context) {
-	c.JSON(http.StatusOK, response{
-		Message: "OK",
-	})
+// @Router /healthz [get]
+// @Success 200 {string} string "OK"
+func (s *Server) healthz(c *gin.Context) {
+	if atomic.LoadInt32(&healthy) == 1 {
+		c.JSON(http.StatusOK, map[string]string{"status": "OK"})
+		return
+	}
+	c.Status(http.StatusServiceUnavailable)
+}
+
+// Readyz godoc
+// @Summary Readiness check
+// @Description used by Kubernetes readiness probe
+// @Tags Kubernetes
+// @Accept json
+// @Produce json
+// @Router /readyz [get]
+// @Success 200 {string} string "OK"
+func (s *Server) readyz(c *gin.Context) {
+	if atomic.LoadInt32(&ready) == 1 {
+		c.JSON(http.StatusOK, map[string]string{"status": "OK"})
+		return
+	}
+	c.Status(http.StatusServiceUnavailable)
+}
+
+// EnableReady godoc
+// @Summary Enable ready state
+// @Description signals the Kubernetes LB that this instance is ready to receive traffic
+// @Tags Kubernetes
+// @Accept json
+// @Produce json
+// @Router /readyz/enable [post]
+// @Success 202 {string} string "OK"
+func (s *Server) enableReady(c *gin.Context) {
+	atomic.StoreInt32(&ready, 1)
+	c.Status(http.StatusAccepted)
+}
+
+// DisableReady godoc
+// @Summary Disable ready state
+// @Description signals the Kubernetes LB to stop sending requests to this instance
+// @Tags Kubernetes
+// @Accept json
+// @Produce json
+// @Router /readyz/disable [post]
+// @Success 202 {string} string "OK"
+func (s *Server) disableReady(c *gin.Context) {
+	atomic.StoreInt32(&ready, 0)
+	c.Status(http.StatusAccepted)
 }
 
 // @Summary List

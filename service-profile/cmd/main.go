@@ -5,25 +5,27 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"github.com/golang-migrate/migrate/v4"
-	"github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
-	"google.golang.org/grpc"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"v1/internal/config"
 	grpcapi "v1/internal/controllers/grpc"
 	httpapi "v1/internal/controllers/http"
 	liberrors "v1/internal/lib/errors"
 	libtrace "v1/internal/lib/trace"
-	"v1/internal/profile/proto"
+	profile "v1/internal/profile/proto"
 	"v1/internal/service"
-	"v1/internal/storage/gorm"
+	storage "v1/internal/storage/gorm"
 	kafkastorage "v1/internal/storage/kafka"
+
+	"github.com/gin-gonic/gin"
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"google.golang.org/grpc"
 )
 
 // @title Profile API
@@ -64,16 +66,18 @@ func main() {
 	srvgrpc := grpcapi.New(usercases)
 	s := grpc.NewServer()
 	profile.RegisterProfileApiServer(s, srvgrpc)
-	srvhttp := httpapi.New(usercases)
+	srvhttp, healthyhttp, readyhttp := httpapi.New(usercases)
 
 	log.Info("start listen")
 	go mustListenGrpc(log, s)
-	go mustListenHTTP(log, srvhttp.R)
+	go mustListenHTTP(log, srvhttp.R, healthyhttp, readyhttp)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
 	<-stop
 	log.Info("graceful stop")
+	atomic.StoreInt32(healthyhttp, 0)
+	atomic.StoreInt32(readyhttp, 0)
 	if err = tp.Shutdown(context.Background()); err != nil {
 		log.Info("Error shutting down tracer provider: %v", err)
 	}
@@ -96,7 +100,10 @@ func mustListenGrpc(log *slog.Logger, s *grpc.Server) {
 
 }
 
-func mustListenHTTP(log *slog.Logger, r *gin.Engine) {
+func mustListenHTTP(log *slog.Logger, r *gin.Engine, healthy, ready *int32) {
+
+	atomic.StoreInt32(healthy, 1)
+	atomic.StoreInt32(ready, 1)
 
 	if err := r.Run(":8082"); err != nil {
 		log.Error(err.Error())
