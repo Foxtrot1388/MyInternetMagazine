@@ -74,6 +74,10 @@ var notDeleteProduct = response{
 	Message: "failed to delete a catalog",
 }
 
+var notGetList = response{
+	Message: "failed to get list of product",
+}
+
 func (a newCatalog) Validate() error {
 	return validation.ValidateStruct(&a,
 		validation.Field(&a.Name, validation.Required),
@@ -178,9 +182,7 @@ func (s *Server) list(c *gin.Context) {
 
 	result, err := s.s.List(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response{
-			Message: "failed to get list of product",
-		})
+		c.JSON(http.StatusInternalServerError, notGetList)
 		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
