@@ -66,6 +66,10 @@ type newCatalog struct {
 	Description string `json:"description"`
 }
 
+var notFoundProduct = Response{
+	Message: "failed to get a product",
+}
+
 func (a newCatalog) Validate() error {
 	return validation.ValidateStruct(&a,
 		validation.Field(&a.Name, validation.Required),
@@ -201,30 +205,20 @@ func (s *Server) list(c *gin.Context) {
 func (s *Server) get(c *gin.Context) {
 
 	idparam := c.Param("id")
-	if idparam == "" {
-		c.JSON(http.StatusInternalServerError, Response{
-			Message: "id is empty",
-		})
-		return
-	}
 
 	ctx, span := s.tracer.Start(c.Request.Context(), "http_get", oteltrace.WithAttributes(attribute.String("id", idparam)))
 	defer span.End()
 
 	id, err := strconv.Atoi(idparam)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Message: "failed to get a product",
-		})
+		c.JSON(http.StatusInternalServerError, notFoundProduct)
 		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
 	product, err := s.s.Get(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Message: "failed to get a product",
-		})
+		c.JSON(http.StatusInternalServerError, notFoundProduct)
 		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
@@ -302,12 +296,6 @@ func (s *Server) create(c *gin.Context) {
 func (s *Server) delete(c *gin.Context) {
 
 	idparam := c.Param("id")
-	if idparam == "" {
-		c.JSON(http.StatusInternalServerError, Response{
-			Message: "id is empty",
-		})
-		return
-	}
 
 	ctx, span := s.tracer.Start(c.Request.Context(), "http_delete", oteltrace.WithAttributes(attribute.String("id", idparam)))
 	defer span.End()

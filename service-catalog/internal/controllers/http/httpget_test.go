@@ -57,6 +57,38 @@ func TestCatalogGETFailHandler(t *testing.T) {
 	var resp Response
 	require.NoError(t, json.Unmarshal([]byte(body), &resp))
 
+	require.Equal(t, notFoundProduct, resp)
+
+}
+
+func TestCatalogGETWrongParametrID(t *testing.T) {
+
+	log := slog.New(
+		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
+	)
+	tracer := noop.NewTracerProvider().Tracer("")
+
+	db := mocks.NewDBRepository(t)
+	cashedb := mocks.NewCasheRepository(t)
+	usercases := service.NewService(log, db, cashedb, tracer)
+	srvhttp, _, _ := NewServer(usercases, tracer)
+
+	req, err := http.NewRequest("GET", "/catalog/test", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rr := httptest.NewRecorder()
+	srvhttp.R.ServeHTTP(rr, req)
+
+	require.Equal(t, rr.Code, http.StatusInternalServerError)
+
+	body := rr.Body.String()
+	var resp Response
+	require.NoError(t, json.Unmarshal([]byte(body), &resp))
+
+	require.Equal(t, notFoundProduct, resp)
+
 }
 
 func TestCatalogGETHandler(t *testing.T) {
