@@ -6,18 +6,18 @@ import (
 	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
 
-	"go.opentelemetry.io/otel"
-
 	"github.com/redis/go-redis/v9"
+	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("profile-server")
-
 type RedisCache struct {
-	cli *redis.Client
+	cli    *redis.Client
+	tracer trace.Tracer
 }
 
-func New(redisHost string) (*RedisCache, error) {
+var ErrRecordNotFound = redis.Nil
+
+func New(redisHost string, tracer trace.Tracer) (*RedisCache, error) {
 	const op = "redis.new"
 
 	rdb := redis.NewClient(&redis.Options{
@@ -26,13 +26,13 @@ func New(redisHost string) (*RedisCache, error) {
 		DB:       0,  // use default DB
 	})
 	_, err := rdb.Ping(context.Background()).Result()
-	return &RedisCache{cli: rdb}, liberrors.WrapErr(op, err)
+	return &RedisCache{cli: rdb, tracer: tracer}, liberrors.WrapErr(op, err)
 }
 
 func (r *RedisCache) Get(ctx context.Context, key string) (*entity.Product, error) {
 	const op = "redis.get"
 
-	ctxspan, span := tracer.Start(ctx, "redis_get")
+	ctxspan, span := r.tracer.Start(ctx, "redis_get")
 	defer span.End()
 
 	result, err := r.cli.Get(ctxspan, key).Result()
@@ -53,7 +53,7 @@ func (r *RedisCache) Get(ctx context.Context, key string) (*entity.Product, erro
 func (r *RedisCache) Set(ctx context.Context, key string, v *entity.Product) error {
 	const op = "redis.set"
 
-	ctxspan, span := tracer.Start(ctx, "redis_set")
+	ctxspan, span := r.tracer.Start(ctx, "redis_set")
 	defer span.End()
 
 	res, err := json.Marshal(v)
@@ -73,7 +73,7 @@ func (r *RedisCache) Set(ctx context.Context, key string, v *entity.Product) err
 func (r *RedisCache) Invalidate(ctx context.Context, key string) error {
 	const op = "redis.invalidate"
 
-	ctxspan, span := tracer.Start(ctx, "redis_invalidate")
+	ctxspan, span := r.tracer.Start(ctx, "redis_invalidate")
 	defer span.End()
 
 	_, err := r.cli.Del(ctxspan, key).Result()
