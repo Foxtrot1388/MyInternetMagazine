@@ -44,11 +44,11 @@ type responseElement struct {
 
 type listResponse []responseElement
 
-type Response struct {
+type response struct {
 	Message string
 }
 
-type GetResponse struct {
+type getResponse struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
@@ -66,8 +66,12 @@ type newCatalog struct {
 	Description string `json:"description"`
 }
 
-var notFoundProduct = Response{
+var notFoundProduct = response{
 	Message: "failed to get a product",
+}
+
+var notDeleteProduct = response{
+	Message: "failed to delete a catalog",
 }
 
 func (a newCatalog) Validate() error {
@@ -174,7 +178,7 @@ func (s *Server) list(c *gin.Context) {
 
 	result, err := s.s.List(ctx)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
+		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to get list of product",
 		})
 		span.SetStatus(otelcodes.Error, err.Error())
@@ -223,7 +227,7 @@ func (s *Server) get(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, GetResponse{
+	c.JSON(http.StatusOK, getResponse{
 		Name:        product.Name,
 		Description: product.Description,
 	})
@@ -244,7 +248,7 @@ func (s *Server) create(c *gin.Context) {
 
 	var newCatalogRequest newCatalog
 	if err := c.BindJSON(&newCatalogRequest); err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
+		c.JSON(http.StatusInternalServerError, response{
 			Message: "bad request",
 		})
 		return
@@ -260,7 +264,7 @@ func (s *Server) create(c *gin.Context) {
 
 	err := newCatalogRequest.Validate()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
+		c.JSON(http.StatusInternalServerError, response{
 			Message: err.Error(),
 		})
 		span.SetStatus(otelcodes.Error, err.Error())
@@ -271,7 +275,7 @@ func (s *Server) create(c *gin.Context) {
 
 	id, err := s.s.Create(ctx, newCatalogRequest.Name, newCatalogRequest.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
+		c.JSON(http.StatusInternalServerError, response{
 			Message: "failed to create a product",
 		})
 		span.SetStatus(otelcodes.Error, err.Error())
@@ -302,18 +306,14 @@ func (s *Server) delete(c *gin.Context) {
 
 	id, err := strconv.Atoi(idparam)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Message: "failed to delete catalog",
-		})
+		c.JSON(http.StatusInternalServerError, notDeleteProduct)
 		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	}
 
 	result, err := s.s.Delete(ctx, id)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, Response{
-			Message: "failed to delete a catalog",
-		})
+		c.JSON(http.StatusInternalServerError, notDeleteProduct)
 		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	} else {

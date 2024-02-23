@@ -8,8 +8,6 @@ import (
 	"os"
 	"strconv"
 	"testing"
-	"v1/internal/cashe"
-	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
 	"v1/internal/service"
 	"v1/internal/service/mocks"
@@ -20,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 )
 
-func TestCatalogGETFailHandler(t *testing.T) {
+func TestCatalogDeleteFailHandler(t *testing.T) {
 
 	log := slog.New(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
@@ -28,7 +26,7 @@ func TestCatalogGETFailHandler(t *testing.T) {
 	notFoundId := 1
 	tracer := noop.NewTracerProvider().Tracer("")
 
-	req, err := http.NewRequest("GET", "/catalog/"+strconv.Itoa(notFoundId), nil)
+	req, err := http.NewRequest("DELETE", "/catalog/"+strconv.Itoa(notFoundId), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,15 +35,11 @@ func TestCatalogGETFailHandler(t *testing.T) {
 
 	db := mocks.NewDBRepository(t)
 	db.
-		On("Get", mock.Anything, notFoundId).
-		Return(nil, liberrors.WrapErr("storage.get", storage.ErrRecordNotFound)).
+		On("Delete", mock.Anything, notFoundId).
+		Return(false, liberrors.WrapErr("storage.get", storage.ErrRecordNotFound)).
 		Once()
 
 	cashedb := mocks.NewCasheRepository(t)
-	cashedb.
-		On("Get", mock.Anything, strconv.Itoa(notFoundId)).
-		Return(nil, liberrors.WrapErr("cashe.get", cashe.ErrRecordNotFound)).
-		Once()
 
 	usercases := service.NewService(log, db, cashedb, tracer)
 	srvhttp, _, _ := NewServer(usercases, tracer)
@@ -57,11 +51,11 @@ func TestCatalogGETFailHandler(t *testing.T) {
 	var resp response
 	require.NoError(t, json.Unmarshal([]byte(body), &resp))
 
-	require.Equal(t, notFoundProduct, resp)
+	require.Equal(t, notDeleteProduct, resp)
 
 }
 
-func TestCatalogGETWrongParametrID(t *testing.T) {
+func TestCatalogDeleteWrongParametrID(t *testing.T) {
 
 	log := slog.New(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
@@ -73,7 +67,7 @@ func TestCatalogGETWrongParametrID(t *testing.T) {
 	usercases := service.NewService(log, db, cashedb, tracer)
 	srvhttp, _, _ := NewServer(usercases, tracer)
 
-	req, err := http.NewRequest("GET", "/catalog/test", nil)
+	req, err := http.NewRequest("DELETE", "/catalog/test", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,20 +81,19 @@ func TestCatalogGETWrongParametrID(t *testing.T) {
 	var resp response
 	require.NoError(t, json.Unmarshal([]byte(body), &resp))
 
-	require.Equal(t, notFoundProduct, resp)
+	require.Equal(t, notDeleteProduct, resp)
 
 }
 
-func TestCatalogGETHandler(t *testing.T) {
+func TestCatalogDeleteHandler(t *testing.T) {
 
 	log := slog.New(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),
 	)
-	wantin := &entity.Product{Id: 1, Name: "Name", Description: "Description"}
-	wantout := getResponse{Name: wantin.Name, Description: wantin.Description}
+	wantinId := 1
 	tracer := noop.NewTracerProvider().Tracer("")
 
-	req, err := http.NewRequest("GET", "/catalog/"+strconv.Itoa(wantin.Id), nil)
+	req, err := http.NewRequest("DELETE", "/catalog/"+strconv.Itoa(wantinId), nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,17 +102,13 @@ func TestCatalogGETHandler(t *testing.T) {
 
 	db := mocks.NewDBRepository(t)
 	db.
-		On("Get", mock.Anything, wantin.Id).
-		Return(wantin, nil).
+		On("Delete", mock.Anything, wantinId).
+		Return(true, nil).
 		Once()
 
 	cashedb := mocks.NewCasheRepository(t)
 	cashedb.
-		On("Get", mock.Anything, strconv.Itoa(wantin.Id)).
-		Return(nil, liberrors.WrapErr("cashe.get", cashe.ErrRecordNotFound)).
-		Once()
-	cashedb.
-		On("Set", mock.Anything, strconv.Itoa(wantin.Id), mock.AnythingOfType("*entity.Product")).
+		On("Invalidate", mock.Anything, strconv.Itoa(wantinId)).
 		Return(nil).
 		Once()
 
@@ -130,9 +119,11 @@ func TestCatalogGETHandler(t *testing.T) {
 	require.Equal(t, rr.Code, http.StatusOK)
 
 	body := rr.Body.String()
-	var resp getResponse
+	var resp deleteResponse
 	require.NoError(t, json.Unmarshal([]byte(body), &resp))
 
-	require.Equal(t, wantout, resp)
+	require.Equal(t, deleteResponse{
+		OK: true,
+	}, resp)
 
 }
