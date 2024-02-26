@@ -78,6 +78,10 @@ var notGetList = response{
 	Message: "failed to get list of product",
 }
 
+var notCreate = response{
+	Message: "failed to create a product",
+}
+
 func (a newCatalog) Validate() error {
 	return validation.ValidateStruct(&a,
 		validation.Field(&a.Name, validation.Required),
@@ -277,9 +281,7 @@ func (s *Server) create(c *gin.Context) {
 
 	id, err := s.s.Create(ctx, newCatalogRequest.Name, newCatalogRequest.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, response{
-			Message: "failed to create a product",
-		})
+		c.JSON(http.StatusInternalServerError, notCreate)
 		span.SetStatus(otelcodes.Error, err.Error())
 		return
 	} else {
