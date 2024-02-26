@@ -7,23 +7,24 @@ import (
 	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
 
-	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
-var tracer = otel.Tracer("catalog-server")
-
 type Service struct {
-	DB    DBRepository
-	Cashe CasheRepository
-	log   *slog.Logger
+	DB     DBRepository
+	Cashe  CasheRepository
+	log    *slog.Logger
+	tracer trace.Tracer
 }
 
+//go:generate mockery --name CasheRepository
 type CasheRepository interface {
 	Get(ctx context.Context, key string) (*entity.Product, error)
 	Set(ctx context.Context, key string, v *entity.Product) error
 	Invalidate(ctx context.Context, key string) error
 }
 
+//go:generate mockery --name DBRepository
 type DBRepository interface {
 	Get(ctx context.Context, id int) (*entity.Product, error)
 	Create(ctx context.Context, product *entity.Product) (int, error)
@@ -31,14 +32,14 @@ type DBRepository interface {
 	List(ctx context.Context) (*[]entity.ElementOfList, error)
 }
 
-func New(log *slog.Logger, DB DBRepository, cashe CasheRepository) *Service {
-	return &Service{DB: DB, log: log, Cashe: cashe}
+func NewService(log *slog.Logger, DB DBRepository, cashe CasheRepository, tracer trace.Tracer) *Service {
+	return &Service{DB: DB, log: log, Cashe: cashe, tracer: tracer}
 }
 
 func (s *Service) Get(ctx context.Context, id int) (*entity.Product, error) {
 	const op = "service.get"
 
-	ctxspan, span := tracer.Start(ctx, "service_get")
+	ctxspan, span := s.tracer.Start(ctx, "service_get")
 	defer span.End()
 
 	log := s.log.With(
@@ -69,7 +70,7 @@ func (s *Service) Get(ctx context.Context, id int) (*entity.Product, error) {
 func (s *Service) Create(ctx context.Context, name string, description string) (int, error) {
 	const op = "service.create"
 
-	ctxspan, span := tracer.Start(ctx, "service_create")
+	ctxspan, span := s.tracer.Start(ctx, "service_create")
 	defer span.End()
 
 	log := s.log.With(
@@ -94,7 +95,7 @@ func (s *Service) Create(ctx context.Context, name string, description string) (
 func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 	const op = "service.delete"
 
-	ctxspan, span := tracer.Start(ctx, "service_delete")
+	ctxspan, span := s.tracer.Start(ctx, "service_delete")
 	defer span.End()
 
 	log := s.log.With(
@@ -119,7 +120,7 @@ func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 func (s *Service) List(ctx context.Context) (*[]entity.ElementOfList, error) {
 	const op = "service.list"
 
-	ctxspan, span := tracer.Start(ctx, "service_list")
+	ctxspan, span := s.tracer.Start(ctx, "service_list")
 	defer span.End()
 
 	log := s.log.With(

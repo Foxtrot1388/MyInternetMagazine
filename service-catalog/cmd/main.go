@@ -25,6 +25,7 @@ import (
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"go.opentelemetry.io/otel"
 	"google.golang.org/grpc"
 )
 
@@ -55,23 +56,23 @@ func main() {
 		panic(err)
 	}
 
-	db, err := storage.New(connection)
+	db, err := storage.New(connection, otel.Tracer("catalog-server"))
 	if err != nil {
 		log.Error(err.Error())
 		panic(err)
 	}
 
-	cashedb, err := cashe.New(getConnectionStringCashe(&cfg.Cashe))
+	cashedb, err := cashe.New(getConnectionStringCashe(&cfg.Cashe), otel.Tracer("catalog-server"))
 	if err != nil {
 		log.Error(err.Error())
 		panic(err)
 	}
 
-	usercases := service.New(log, db, cashedb)
+	usercases := service.NewService(log, db, cashedb, otel.Tracer("catalog-server"))
 	srvgrpc := grpcapi.New(usercases)
 	s := grpc.NewServer()
 	catalog.RegisterCatalogApiServer(s, srvgrpc)
-	srvhttp, healthyhttp, readyhttp := httpapi.New(usercases)
+	srvhttp, healthyhttp, readyhttp := httpapi.NewServer(usercases, otel.Tracer("gin-server"))
 
 	log.Info("start listen")
 	go mustListenGrpc(log, s)
