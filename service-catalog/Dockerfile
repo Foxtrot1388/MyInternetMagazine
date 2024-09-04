@@ -6,7 +6,7 @@ ADD go.sum .
 RUN go mod download
 
 ADD . .
-RUN go build -mod=mod -o app.exe cmd/main.go
+RUN go build -mod=mod -o app.exe cmd/app/main.go
 
 #lightweight docker container with binary
 FROM alpine:latest

@@ -8,12 +8,12 @@ import (
 	"os"
 	"strconv"
 	"testing"
-	"v1/internal/cashe"
 	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
 	"v1/internal/service"
 	"v1/internal/service/mocks"
 	storage "v1/internal/storage/gorm"
+	cashe "v1/internal/storage/redis"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"

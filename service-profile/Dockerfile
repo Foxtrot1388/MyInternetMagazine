@@ -8,7 +8,7 @@ RUN go mod download
 RUN apk --no-cache add git gcc libc-dev
 
 ADD . .
-RUN CGO_ENABLED=1 go build -tags musl -mod=mod -o app.exe cmd/main.go
+RUN CGO_ENABLED=1 go build -tags musl -mod=mod -o app.exe cmd/app/main.go
 
 #lightweight docker container with binary
 FROM alpine:latest

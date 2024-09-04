@@ -8,7 +8,7 @@ RUN go mod download
 RUN apk --no-cache add git gcc libc-dev
 
 ADD . .
-RUN CGO_ENABLED=1 go build -tags musl -mod=mod -o app.exe main.go
+RUN CGO_ENABLED=1 go build -tags musl -mod=mod -o app.exe cmd/app/main.go
 
 #lightweight docker container with binary
 FROM alpine:latest
@@ -23,5 +23,6 @@ ARG SMTP_SERVER_EMAIL=$SMTP_SERVER_EMAIL
 RUN apk --no-cache add ca-certificates
 
 COPY --from=builder /usr/local/go/src/app.exe /
+COPY /assets /assets
 
 CMD [ "/app.exe"]

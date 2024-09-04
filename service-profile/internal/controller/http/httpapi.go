@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync/atomic"
-	_ "v1/docs"
+	_ "v1/api"
 	"v1/internal/entity"
 
 	"github.com/gin-gonic/gin"

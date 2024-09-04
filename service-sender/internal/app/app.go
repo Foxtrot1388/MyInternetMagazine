@@ -1,17 +1,18 @@
-package main
+package app
 
 import (
 	"fmt"
-	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 	"os"
 	"os/signal"
-	"sender/config"
-	"sender/senders/email"
+	"sender/internal/config"
+	"sender/internal/senders/email"
 	"syscall"
 	"time"
+
+	"github.com/confluentinc/confluent-kafka-go/v2/kafka"
 )
 
-func main() {
+func Run() {
 
 	cfg := config.Get()
 

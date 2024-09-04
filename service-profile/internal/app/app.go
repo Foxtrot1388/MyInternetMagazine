@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -12,8 +12,8 @@ import (
 	"sync/atomic"
 	"syscall"
 	"v1/internal/config"
-	grpcapi "v1/internal/controllers/grpc"
-	httpapi "v1/internal/controllers/http"
+	grpcapi "v1/internal/controller/grpc"
+	httpapi "v1/internal/controller/http"
 	liberrors "v1/internal/lib/errors"
 	libtrace "v1/internal/lib/trace"
 	profile "v1/internal/profile/proto"
@@ -28,14 +28,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// @title Profile API
-// @version 1.0
-// @description API Server for profile
-
-// @host localhost:8082
-// @BasePath /
-
-func main() {
+func Run() {
 
 	log := slog.New(
 		slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelWarn}),

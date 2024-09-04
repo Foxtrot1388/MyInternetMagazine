@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/smtp"
-	"sender/config"
+	"sender/internal/config"
 )
 
 type kafkaMessage struct {
@@ -36,7 +36,7 @@ func SendEmail(cfg *config.Config, value []byte) error {
 
 func SendRegistrationEmail(cfg *config.Config, data map[string]string) error {
 
-	tmpl, err := template.ParseFiles("registration.html")
+	tmpl, err := template.ParseFiles("assets/registration.html")
 	if err != nil {
 		return err
 	}
