@@ -2,23 +2,16 @@ package grpcapi
 
 import (
 	"context"
+	profile "v1/internal/profile/proto"
+
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"v1/internal/entity"
-	"v1/internal/profile/proto"
 )
 
 type Server struct {
 	profile.UnimplementedProfileApiServer
 	s Service
-}
-
-type Service interface {
-	Login(ctx context.Context, pass, login string) (*entity.LoginUser, error)
-	Get(ctx context.Context, id int) (*entity.User, error)
-	Create(ctx context.Context, login, pass, fname, sname, lname, email string) (int, error)
-	Delete(ctx context.Context, id int) (bool, error)
 }
 
 func New(s Service) *Server {

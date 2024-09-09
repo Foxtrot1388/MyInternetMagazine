@@ -1,12 +1,10 @@
 package httpapi
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"sync/atomic"
 	_ "v1/api"
-	"v1/internal/entity"
 
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -27,13 +25,6 @@ var (
 type Server struct {
 	s Service
 	R *gin.Engine
-}
-
-type Service interface {
-	Login(ctx context.Context, pass, login string) (*entity.LoginUser, error)
-	Get(ctx context.Context, id int) (*entity.User, error)
-	Create(ctx context.Context, login, pass, fname, sname, lname, email string) (int, error)
-	Delete(ctx context.Context, id int) (bool, error)
 }
 
 type newUser struct {

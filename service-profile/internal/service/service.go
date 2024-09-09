@@ -4,15 +4,17 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"log/slog"
+	"time"
+	liberrors "v1/internal/lib/errors"
+	"v1/internal/model"
+	"v1/internal/model/converter"
+
 	validation "github.com/go-ozzo/ozzo-validation/v4"
 	"github.com/go-ozzo/ozzo-validation/v4/is"
 	"github.com/golang-jwt/jwt/v5"
 	"go.opentelemetry.io/otel"
 	"golang.org/x/crypto/bcrypt"
-	"log/slog"
-	"time"
-	"v1/internal/entity"
-	liberrors "v1/internal/lib/errors"
 )
 
 var tracer = otel.Tracer("profile-server")
@@ -24,17 +26,6 @@ type Service struct {
 	signingkey string
 }
 
-type Repository interface {
-	Login(ctx context.Context, login string) (*entity.UserDB, error)
-	Get(ctx context.Context, id int) (*entity.User, error)
-	Create(ctx context.Context, user *entity.NewUser) (int, error)
-	Delete(ctx context.Context, id int) (bool, error)
-}
-
-type KafkaSender interface {
-	Send(v []byte, topic string) error
-}
-
 func New(log *slog.Logger, DB Repository, signingkey string, Bus KafkaSender) *Service {
 	return &Service{DB: DB, log: log, signingkey: signingkey, Bus: Bus}
 }
@@ -43,7 +34,7 @@ var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
-func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginUser, error) {
+func (s *Service) Login(ctx context.Context, login, pass string) (*model.LoginUser, error) {
 	const op = "service.login"
 
 	ctxspan, span := tracer.Start(ctx, "service_login")
@@ -78,13 +69,13 @@ func (s *Service) Login(ctx context.Context, login, pass string) (*entity.LoginU
 		return nil, liberrors.WrapErr(op, err)
 	}
 
-	return &entity.LoginUser{
+	return &model.LoginUser{
 		Token: tokenString,
 	}, nil
 
 }
 
-func (s *Service) Get(ctx context.Context, id int) (*entity.User, error) {
+func (s *Service) Get(ctx context.Context, id int) (*model.User, error) {
 	const op = "service.get"
 
 	ctxspan, span := tracer.Start(ctx, "service_get")
@@ -100,7 +91,7 @@ func (s *Service) Get(ctx context.Context, id int) (*entity.User, error) {
 		return nil, liberrors.WrapErr(op, err)
 	}
 
-	return user, nil
+	return converter.GetUser(user), nil
 
 }
 
@@ -127,7 +118,7 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 		return 0, liberrors.WrapErr(op, err)
 	}
 
-	user := &entity.NewUser{
+	user := &model.NewUser{
 		Pass:       passHash,
 		Login:      login,
 		Firstname:  fname,
@@ -150,7 +141,7 @@ func (s *Service) Create(ctx context.Context, login, pass, fname, sname, lname, 
 
 }
 
-func (s *Service) sendRegistrationEmail(ctx context.Context, user *entity.NewUser) {
+func (s *Service) sendRegistrationEmail(ctx context.Context, user *model.NewUser) {
 	const op = "service.sendRegistrationEmail"
 
 	_, span := tracer.Start(ctx, "service_sendRegistrationEmail")

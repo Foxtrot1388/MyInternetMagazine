@@ -2,22 +2,15 @@ package grpcapi
 
 import (
 	"context"
+	catalog "v1/internal/catalog/proto"
+
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"v1/internal/catalog/proto"
-	"v1/internal/entity"
 )
 
 type Server struct {
 	catalog.UnimplementedCatalogApiServer
 	s Service
-}
-
-type Service interface {
-	Get(ctx context.Context, id int) (*entity.Product, error)
-	Create(ctx context.Context, name string, description string) (int, error)
-	Delete(ctx context.Context, id int) (bool, error)
-	List(ctx context.Context) (*[]entity.ElementOfList, error)
 }
 
 func New(s Service) *Server {

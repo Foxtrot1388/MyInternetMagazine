@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"v1/internal/entity"
 	liberrors "v1/internal/lib/errors"
+	"v1/internal/model"
+	"v1/internal/model/converter"
 
 	"go.opentelemetry.io/otel/trace"
 )
@@ -17,26 +19,11 @@ type Service struct {
 	tracer trace.Tracer
 }
 
-//go:generate mockery --name CasheRepository
-type CasheRepository interface {
-	Get(ctx context.Context, key string) (*entity.Product, error)
-	Set(ctx context.Context, key string, v *entity.Product) error
-	Invalidate(ctx context.Context, key string) error
-}
-
-//go:generate mockery --name DBRepository
-type DBRepository interface {
-	Get(ctx context.Context, id int) (*entity.Product, error)
-	Create(ctx context.Context, product *entity.Product) (int, error)
-	Delete(ctx context.Context, id int) (bool, error)
-	List(ctx context.Context) (*[]entity.ElementOfList, error)
-}
-
 func NewService(log *slog.Logger, DB DBRepository, cashe CasheRepository, tracer trace.Tracer) *Service {
 	return &Service{DB: DB, log: log, Cashe: cashe, tracer: tracer}
 }
 
-func (s *Service) Get(ctx context.Context, id int) (*entity.Product, error) {
+func (s *Service) Get(ctx context.Context, id int) (*model.Product, error) {
 	const op = "service.get"
 
 	ctxspan, span := s.tracer.Start(ctx, "service_get")
@@ -63,7 +50,7 @@ func (s *Service) Get(ctx context.Context, id int) (*entity.Product, error) {
 
 	}
 
-	return product, nil
+	return converter.GetProduct(product), nil
 
 }
 
@@ -117,7 +104,7 @@ func (s *Service) Delete(ctx context.Context, id int) (bool, error) {
 
 }
 
-func (s *Service) List(ctx context.Context) (*[]entity.ElementOfList, error) {
+func (s *Service) List(ctx context.Context) (*[]model.ElementOfList, error) {
 	const op = "service.list"
 
 	ctxspan, span := s.tracer.Start(ctx, "service_list")
@@ -127,12 +114,17 @@ func (s *Service) List(ctx context.Context) (*[]entity.ElementOfList, error) {
 		slog.String("op", op),
 	)
 
-	result, err := s.DB.List(ctxspan)
+	resultentity, err := s.DB.List(ctxspan)
 	if err != nil {
 		log.Error(err.Error())
 		return nil, liberrors.WrapErr(op, err)
 	}
 
-	return result, nil
+	result := make([]model.ElementOfList, len(*resultentity))
+	for c, element := range *resultentity {
+		result[c] = converter.GetElementOfList(element)
+	}
+
+	return &result, nil
 
 }

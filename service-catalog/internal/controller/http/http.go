@@ -1,12 +1,10 @@
 package httpapi
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"sync/atomic"
 	_ "v1/api"
-	"v1/internal/entity"
 
 	"github.com/gin-gonic/gin"
 	validation "github.com/go-ozzo/ozzo-validation/v4"
@@ -28,13 +26,6 @@ type Server struct {
 	s      Service
 	R      *gin.Engine
 	tracer trace.Tracer
-}
-
-type Service interface {
-	Get(ctx context.Context, id int) (*entity.Product, error)
-	Create(ctx context.Context, name string, description string) (int, error)
-	Delete(ctx context.Context, id int) (bool, error)
-	List(ctx context.Context) (*[]entity.ElementOfList, error)
 }
 
 type responseElement struct {

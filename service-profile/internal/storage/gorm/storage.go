@@ -2,11 +2,13 @@ package storage
 
 import (
 	"context"
+	"v1/internal/entity"
+	liberrors "v1/internal/lib/errors"
+	"v1/internal/model"
+
 	"go.opentelemetry.io/otel"
 	postgresgorm "gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"v1/internal/entity"
-	liberrors "v1/internal/lib/errors"
 )
 
 var tracer = otel.Tracer("profile-server")
@@ -57,7 +59,7 @@ func (s *Storage) Get(ctx context.Context, id int) (*entity.User, error) {
 
 }
 
-func (s *Storage) Create(ctx context.Context, user *entity.NewUser) (int, error) {
+func (s *Storage) Create(ctx context.Context, user *model.NewUser) (int, error) {
 	const op = "gorm.create"
 
 	ctxspan, span := tracer.Start(ctx, "gorm_create")
